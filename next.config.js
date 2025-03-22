@@ -5,7 +5,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  output: 'export', // 启用静态导出用于GitHub Pages
+
   // 自定义域名时不需要basePath和assetPrefix
   basePath: '',
   assetPrefix: '',
