@@ -14,5 +14,23 @@
   "bgs": "课程信息",
   "future": "未来发展",
   "faq": "常见问题",
-  "think": "心路历程"
+  "think": "心路历程",
+  "login": {
+    "title": "登录",
+    "display": "hidden",
+    "theme": {
+      "layout": "raw",
+      "sidebar": false,
+      "toc": false
+    }
+  },
+  "register": {
+    "title": "注册",
+    "display": "hidden",
+    "theme": {
+      "layout": "raw",
+      "sidebar": false,
+      "toc": false
+    }
+  }
 }

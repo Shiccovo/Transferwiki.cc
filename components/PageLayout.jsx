@@ -1,20 +1,31 @@
 import { motion } from 'framer-motion';
+import { useSession } from 'next-auth/react';
+import CommentSection from './CommentSection';
+import EditPageButton from './EditPageButton';
+import { useRouter } from 'next/router';
 
-export default function PageLayout({ children, frontMatter }) {
-  const { title, description } = frontMatter;
+export default function PageLayout({ children, frontMatter, meta }) {
+  const { title, description } = frontMatter || meta || {};
+  const { data: session } = useSession();
+  const router = useRouter();
+  const currentPath = router.asPath;
 
   return (
     <article className="nx-min-h-screen">
-      {title && (
-        <motion.h1 
-          className="nx-text-4xl nx-font-bold nx-tracking-tight nx-mb-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          {title}
-        </motion.h1>
-      )}
+      <div className="flex justify-between items-center mb-6">
+        {title && (
+          <motion.h1 
+            className="nx-text-4xl nx-font-bold nx-tracking-tight"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            {title}
+          </motion.h1>
+        )}
+        
+        {session && <EditPageButton currentPath={currentPath} />}
+      </div>
       
       {description && (
         <motion.div 
@@ -35,6 +46,12 @@ export default function PageLayout({ children, frontMatter }) {
       >
         {children}
       </motion.div>
+
+      {/* Don't show comments on auth pages or login/register pages */}
+      {!currentPath.startsWith('/auth/') && 
+       !currentPath.startsWith('/login') && 
+       !currentPath.startsWith('/register') && 
+       <CommentSection pagePath={currentPath} />}
     </article>
   );
 }

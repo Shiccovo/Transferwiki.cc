@@ -1,0 +1,158 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String      @id @default(cuid())
+  name          String?
+  email         String?     @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          String      @default("USER")
+  accounts      Account[]
+  sessions      Session[]
+  comments      Comment[]
+  pageEdits     PageEdit[]
+  authoredPages Page[]      @relation("PageAuthor")
+  lastEditedPages Page[]    @relation("PageLastEditor")
+  forumTopics   ForumTopic[]
+  forumReplies  ForumReply[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  bio           String?
+  location      String?
+  website       String?
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  pagePath  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Wiki 系统模型
+model Page {
+  id          String    @id @default(cuid())
+  slug        String    @unique  // URL路径
+  title       String
+  content     String    // 当前内容
+  description String?   // 页面描述/摘要
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String
+  createdBy   User      @relation("PageAuthor", fields: [createdById], references: [id])
+  lastEditedById String
+  lastEditedBy User     @relation("PageLastEditor", fields: [lastEditedById], references: [id])
+  edits       PageEdit[]
+  version     Int       @default(1)
+  isPublished Boolean   @default(true)
+  viewCount   Int       @default(0)
+  category    String?   // 可选分类
+  tags        String?   // 逗号分隔的标签
+}
+
+model PageEdit {
+  id          String    @id @default(cuid())
+  pageId      String
+  page        Page      @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  content     String     
+  title       String?
+  description String?
+  createdAt   DateTime  @default(now())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String    @default("PENDING")  // PENDING, APPROVED, REJECTED
+  version     Int       // 版本号
+  summary     String?   // 编辑摘要
+  diff        String?   // 保存差异
+}
+
+// 论坛系统模型
+model ForumCategory {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  slug        String      @unique
+  topics      ForumTopic[]
+  order       Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  isActive    Boolean     @default(true)
+}
+
+model ForumTopic {
+  id          String      @id @default(cuid())
+  title       String
+  content     String
+  categoryId  String
+  category    ForumCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replies     ForumReply[]
+  viewCount   Int         @default(0)
+  isPinned    Boolean     @default(false)
+  isLocked    Boolean     @default(false)
+  lastReplyAt DateTime?
+}
+
+model ForumReply {
+  id          String      @id @default(cuid())
+  content     String
+  topicId     String
+  topic       ForumTopic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isEdited    Boolean     @default(false)
+}
