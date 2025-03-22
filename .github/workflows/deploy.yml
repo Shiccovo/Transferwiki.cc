@@ -42,7 +42,9 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
       
       - name: Create .nojekyll file
-        run: touch ./out/.nojekyll
+        run: |
+          mkdir -p ./out
+          touch ./out/.nojekyll
       
       - name: Create CNAME file if needed
         run: |
