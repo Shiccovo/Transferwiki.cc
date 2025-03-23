@@ -1,5 +1,6 @@
-import { prisma } from '../../../lib/prisma';
 import { hash } from 'bcrypt';
+import { userOperations } from '../../../lib/db';
+import { supabase } from '../../../lib/supabase';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -26,9 +27,7 @@ export default async function handler(req, res) {
     }
 
     // 检查邮箱是否已被使用
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
+    const existingUser = await userOperations.getUserByEmail(email);
 
     if (existingUser) {
       return res.status(400).json({ error: '此电子邮件已被注册' });
@@ -36,16 +35,17 @@ export default async function handler(req, res) {
 
     // 对密码进行哈希处理
     const hashedPassword = await hash(password, 10);
+    
+    // 检查是否为首个用户
+    const { data: users } = await supabase.from('User').select('count');
+    const isFirstUser = !users || users.count === 0;
 
     // 创建新用户
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        // 检查是否为首个用户，如果是，设置为管理员
-        role: await prisma.user.count() === 0 ? 'ADMIN' : 'USER',
-      },
+    const user = await userOperations.createUser({
+      name,
+      email,
+      password: hashedPassword,
+      role: isFirstUser ? 'ADMIN' : 'USER',
     });
 
     // 不返回密码
@@ -58,7 +58,5 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('注册错误:', error);
     return res.status(500).json({ message: '注册过程中发生错误' })
-  } finally {
-    await prisma.$disconnect()
   }
 }

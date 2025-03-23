@@ -1,9 +1,9 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { prisma } from "../../../lib/prisma";
 import { compare } from "bcrypt";
+import { supabase } from "../../../lib/supabase";
+import { userOperations } from "../../../lib/db";
 
 // 自定义 QQ OAuth Provider
 const QQProvider = {
@@ -67,7 +67,6 @@ const QQProvider = {
 };
 
 export const authOptions = {
-  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       id: "credentials",
@@ -81,32 +80,34 @@ export const authOptions = {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email
+        try {
+          // 使用自定义函数获取用户
+          const user = await userOperations.getUserByEmail(credentials.email);
+
+          if (!user || !user.password) {
+            return null;
           }
-        });
 
-        if (!user || !user.password) {
+          const isPasswordValid = await compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isPasswordValid) {
+            return null;
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            role: user.role
+          };
+        } catch (error) {
+          console.error("Error in authorize:", error);
           return null;
         }
-
-        const isPasswordValid = await compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-          role: user.role
-        };
       }
     }),
     GoogleProvider({
@@ -137,7 +138,7 @@ export const authOptions = {
   },
   callbacks: {
     async jwt({ token, user, account }) {
-      // 初次登录时，将数据库用户信息添加到JWT
+      // 初次登录时，将用户信息添加到JWT
       if (user) {
         token.id = user.id;
         token.role = user.role;
@@ -154,23 +155,27 @@ export const authOptions = {
     },
     async signIn({ user, account }) {
       try {
-        // 检查是否为第一个用户，如果是，则设置为管理员
-        const usersCount = await prisma.user.count();
-        
-        if (usersCount === 1) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { role: "ADMIN" },
-          });
-          user.role = "ADMIN";
-        } else {
+        // 如果是使用OAuth登录
+        if (account && account.provider !== "credentials") {
+          // 检查用户是否已存在
+          const existingUser = await userOperations.getUserByEmail(user.email);
+          
+          if (!existingUser) {
+            // 创建新用户
+            await userOperations.createUser({
+              name: user.name,
+              email: user.email,
+              image: user.image,
+              role: "USER",
+            });
+          }
+          
           // 检查是否为指定的管理员邮箱
           const adminEmails = process.env.ADMIN_EMAILS?.split(",") || [];
           if (user.email && adminEmails.includes(user.email)) {
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { role: "ADMIN" },
-            });
+            if (existingUser) {
+              await userOperations.updateUser(existingUser.id, { role: "ADMIN" });
+            }
             user.role = "ADMIN";
           }
         }

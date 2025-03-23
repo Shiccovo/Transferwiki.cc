@@ -1,37 +1,13 @@
 import { ThemeProvider } from 'next-themes';
 import { SessionProvider } from 'next-auth/react';
-import { createClient } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
-import { PrismaClient } from '@prisma/client';
+import { supabase } from '../lib/supabase';
 import '../styles/globals.css';
 
-// Create a single supabase client for interacting with your database
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-// Global prisma instance
-export let prisma;
-
-// Initialize PrismaClient in development with global.prisma
-if (process.env.NODE_ENV === 'development') {
-  if (!global.prisma) {
-    global.prisma = new PrismaClient();
-  }
-  prisma = global.prisma;
-} else {
-  // In production, always create a new PrismaClient instance
-  prisma = new PrismaClient();
-}
-
 export default function App({ Component, pageProps }) {
-  const [supabase, setSupabase] = useState(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (supabaseUrl && supabaseAnonKey) {
-      setSupabase(createClient(supabaseUrl, supabaseAnonKey));
-    }
-    
     setMounted(true);
   }, []);
 
@@ -90,7 +66,7 @@ export default function App({ Component, pageProps }) {
       refetchOnWindowFocus={true} // 窗口获得焦点时重新获取会话
     >
       <ThemeProvider attribute="class" defaultTheme="system">
-        {getLayout(<Component {...pageProps} supabase={supabase} />)}
+        {getLayout(<Component {...pageProps} />)}
       </ThemeProvider>
     </SessionProvider>
   );
