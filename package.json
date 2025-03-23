@@ -60,6 +60,7 @@
     "remark-html": "^16.0.1",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.1",
+    "supabase": "^2.19.7",
     "unified": "^11.0.5"
   },
   "devDependencies": {
