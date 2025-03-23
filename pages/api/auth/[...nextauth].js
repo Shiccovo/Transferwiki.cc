@@ -76,27 +76,41 @@ export const authOptions = {
         password: { label: "密码", type: "password" }
       },
       async authorize(credentials) {
+        // 验证凭据是否存在
         if (!credentials?.email || !credentials?.password) {
-          return null;
+          throw new Error("请提供邮箱和密码");
         }
 
         try {
           // 使用自定义函数获取用户
           const user = await userOperations.getUserByEmail(credentials.email);
 
-          if (!user || !user.password) {
-            return null;
+          // 验证用户是否存在
+          if (!user) {
+            console.log(`用户不存在: ${credentials.email}`);
+            throw new Error("邮箱或密码不正确");
           }
 
+          // 验证用户是否有密码
+          if (!user.password) {
+            console.log(`用户没有密码: ${credentials.email}`);
+            throw new Error("账号验证失败，请使用其他登录方式");
+          }
+
+          // 验证密码
           const isPasswordValid = await compare(
             credentials.password,
             user.password
           );
 
+          // 密码不正确
           if (!isPasswordValid) {
-            return null;
+            console.log(`密码不正确: ${credentials.email}`);
+            throw new Error("邮箱或密码不正确");
           }
 
+          // 登录成功，返回用户信息
+          console.log(`用户登录成功: ${user.email} (${user.name})`);
           return {
             id: user.id,
             email: user.email,
@@ -105,8 +119,8 @@ export const authOptions = {
             role: user.role
           };
         } catch (error) {
-          console.error("Error in authorize:", error);
-          return null;
+          console.error("登录验证失败:", error.message);
+          throw new Error(error.message || "登录失败，请稍后再试");
         }
       }
     }),
@@ -116,13 +130,45 @@ export const authOptions = {
     }),
     QQProvider,
   ],
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false, // 开发环境中设置为 false，确保 cookie 可以在任何环境下工作
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+      },
+    },
+    callbackUrl: {
+      name: `next-auth.callback-url`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false,
+      },
+    },
+    csrfToken: {
+      name: `next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false,
+      },
+    },
+  },
   session: {
     strategy: "jwt", // 使用JWT策略存储会话
     maxAge: 30 * 24 * 60 * 60, // 30天
+    updateAge: 24 * 60 * 60, // 每24小时刷新会话
   },
   jwt: {
     secret: process.env.NEXTAUTH_SECRET,
     maxAge: 30 * 24 * 60 * 60, // 30天
+    encryption: true, // 启用加密
   },
   debug: process.env.NEXTAUTH_DEBUG === "true",
   // 自定义错误信息（中文）

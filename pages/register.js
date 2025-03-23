@@ -34,17 +34,41 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // 验证输入
-    if (!name || !email || !password || !confirmPassword) {
-      setError('请填写所有字段');
+    // 验证表单完整性
+    if (!name) {
+      setError('请输入用户名');
       return;
     }
     
+    if (!email) {
+      setError('请输入电子邮箱');
+      return;
+    }
+    
+    if (!password) {
+      setError('请输入密码');
+      return;
+    }
+    
+    if (!confirmPassword) {
+      setError('请确认密码');
+      return;
+    }
+    
+    // 验证密码匹配
     if (password !== confirmPassword) {
       setError('两次输入的密码不匹配');
       return;
     }
     
+    // 验证邮箱格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('请提供有效的电子邮件地址');
+      return;
+    }
+    
+    // 验证密码长度
     if (password.length < 6) {
       setError('密码长度必须至少为6个字符');
       return;
@@ -53,6 +77,7 @@ export default function Register() {
     try {
       setLoading(true);
       setError('');
+      setSuccess('');
       
       // 调用注册API
       const response = await fetch('/api/auth/register', {
@@ -67,28 +92,61 @@ export default function Register() {
         }),
       });
       
+      // 解析响应数据
       const data = await response.json();
       
+      // 检查注册是否成功
       if (!response.ok) {
         throw new Error(data.error || '注册失败');
       }
       
       // 注册成功
+      console.log('注册成功:', data.user);
       setSuccess('注册成功！正在为您登录...');
       
-      // 使用新注册的凭据自动登录
+      // 延迟一段时间后尝试自动登录
       setTimeout(async () => {
-        await signIn('credentials', {
-          redirect: false,
-          email,
-          password,
-        });
-        
-        router.push('/');
+        try {
+          // 使用新注册的凭据进行登录
+          const result = await signIn('credentials', {
+            redirect: false,
+            email,
+            password,
+          });
+          
+          // 检查登录结果
+          if (result?.error) {
+            console.error('自动登录失败:', result.error);
+            setError('自动登录失败，请手动登录');
+            setSuccess('');
+            return;
+          }
+          
+          if (!result?.ok) {
+            setError('自动登录失败，请手动登录');
+            setSuccess('');
+            return;
+          }
+          
+          // 自动登录成功，直接重定向
+          console.log('注册并自动登录成功，正在重定向...');
+          
+          // 延迟一小段时间后重定向，确保 NextAuth 有足够时间设置会话 
+          setTimeout(() => {
+            // 使用硬重定向确保整个页面刷新
+            window.location.href = '/';
+          }, 1000);
+        } catch (loginError) {
+          console.error('自动登录过程出错:', loginError);
+          setError('自动登录失败，请手动登录');
+          setSuccess('');
+        }
       }, 1500);
       
     } catch (error) {
-      setError(error.message);
+      console.error('注册失败:', error);
+      setSuccess('');
+      setError(error.message || '注册失败，请稍后再试');
     } finally {
       setLoading(false);
     }

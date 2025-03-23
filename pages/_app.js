@@ -59,11 +59,14 @@ export default function App({ Component, pageProps }) {
     }
   }, [mounted]);
 
+
   return (
     <SessionProvider 
       session={pageProps.session}
       refetchInterval={5 * 60} // 每5分钟重新获取会话以确保会话始终是最新的
       refetchOnWindowFocus={true} // 窗口获得焦点时重新获取会话
+      refetchWhenOffline={false} // 离线时不重新获取
+      staleTime={0} // 立即使用新会话数据
     >
       <ThemeProvider attribute="class" defaultTheme="system">
         {getLayout(<Component {...pageProps} />)}

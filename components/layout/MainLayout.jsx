@@ -6,7 +6,7 @@ import { useTheme } from 'next-themes';
 import { motion } from 'framer-motion';
 
 export default function MainLayout({ children }) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -18,6 +18,13 @@ export default function MainLayout({ children }) {
   useEffect(() => {
     setMounted(true);
   }, []);
+  
+  // 简单保存会话到本地存储用于备份
+  useEffect(() => {
+    if (session && session.user) {
+      localStorage.setItem('userSession', JSON.stringify(session));
+    }
+  }, [session]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -36,7 +43,23 @@ export default function MainLayout({ children }) {
   }
 
   const UserMenu = () => {
-    if (!session) {
+    // 从本地存储获取备份会话
+    const storedSessionData = 
+      !session && status === 'loading' ? 
+      JSON.parse(localStorage.getItem('userSession') || 'null') : 
+      null;
+    
+    if (status === 'loading' && !storedSessionData) {
+      // 如果正在加载且没有备份，显示加载状态
+      return (
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 animate-pulse"></div>
+        </div>
+      );
+    }
+    
+    if (status === 'unauthenticated' && !storedSessionData) {
+      // 未登录状态
       return (
         <div className="flex items-center space-x-3">
           <button
@@ -56,25 +79,49 @@ export default function MainLayout({ children }) {
       );
     }
 
+    // 使用会话数据或备份数据
+    const user = session?.user || storedSessionData?.user;
+    
+    if (!user) {
+      return (
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => router.push('/login')}
+            className="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400"
+          >
+            登录
+          </button>
+          <span className="text-gray-300 dark:text-gray-700">|</span>
+          <button
+            onClick={() => router.push('/register')}
+            className="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400"
+          >
+            注册
+          </button>
+        </div>
+      );
+    }
+
+    // 已登录状态
     return (
       <div className="relative" ref={menuRef}>
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           className="flex items-center space-x-1 focus:outline-none"
         >
-          {session.user.image ? (
+          {user.image ? (
             <img
-              src={session.user.image}
-              alt={session.user.name}
+              src={user.image}
+              alt={user.name}
               className="w-8 h-8 rounded-full"
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
-              {session.user.name?.charAt(0).toUpperCase() || 'U'}
+              {user.name?.charAt(0).toUpperCase() || 'U'}
             </div>
           )}
           <span className="text-sm font-medium text-gray-700 dark:text-gray-200 hidden md:inline">
-            {session.user.name}
+            {user.name}
           </span>
         </button>
 
@@ -83,13 +130,21 @@ export default function MainLayout({ children }) {
             <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
               个人资料
             </Link>
-            {session.user.role === 'ADMIN' && (
+            {user.role === 'ADMIN' && (
               <Link href="/admin" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
                 管理中心
               </Link>
             )}
             <button
-              onClick={() => signOut()}
+              onClick={() => {
+                // 清除本地会话数据
+                localStorage.removeItem('userSession');
+                
+                // 退出登录
+                signOut({
+                  callbackUrl: '/',
+                });
+              }}
               className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               退出登录

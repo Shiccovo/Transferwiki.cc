@@ -1,259 +1,190 @@
-const { createClient } = require('@supabase/supabase-js');
-const bcrypt = require('bcrypt');
-require('dotenv').config();
+/**
+ * Supabase Database Setup Script
+ * 
+ * This script initializes the tables needed for the TransferWiki application in Supabase.
+ * Run this script once to set up your database schema.
+ */
 
-// 获取环境变量 - 支持两种可能的环境变量名称
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('错误: 缺少Supabase环境变量。请在.env文件中设置NEXT_PUBLIC_SUPABASE_URL和NEXT_PUBLIC_SUPABASE_ANON_KEY。');
-  process.exit(1);
-}
-
-// 创建Supabase客户端
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from '../lib/supabase.js';
 
 async function setupDatabase() {
-  console.log('开始设置Supabase数据库...');
-
   try {
-    // 创建用户表
-    console.log('创建User表...');
+    console.log('🔧 Starting Supabase database setup...');
+
+    // Create User table
+    console.log('Creating User table...');
     await supabase.rpc('create_table_if_not_exists', {
       table_name: 'User',
-      table_definition: `
+      definition: `
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        name TEXT,
-        email TEXT UNIQUE,
-        emailVerified TIMESTAMP,
-        image TEXT,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
         password TEXT,
-        role TEXT DEFAULT 'USER',
-        bio TEXT,
-        location TEXT,
-        website TEXT,
-        createdAt TIMESTAMP DEFAULT NOW(),
-        updatedAt TIMESTAMP DEFAULT NOW()
+        image TEXT,
+        role TEXT NOT NULL DEFAULT 'USER',
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+        updatedAt TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
       `
     });
 
-    // 创建Session表
-    console.log('创建Session表...');
-    await supabase.rpc('create_table_if_not_exists', {
-      table_name: 'Session',
-      table_definition: `
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        sessionToken TEXT UNIQUE,
-        userId UUID REFERENCES User(id) ON DELETE CASCADE,
-        expires TIMESTAMP
-      `
-    });
-
-    // 创建Account表
-    console.log('创建Account表...');
-    await supabase.rpc('create_table_if_not_exists', {
-      table_name: 'Account',
-      table_definition: `
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        userId UUID REFERENCES User(id) ON DELETE CASCADE,
-        type TEXT,
-        provider TEXT,
-        providerAccountId TEXT,
-        refresh_token TEXT,
-        access_token TEXT,
-        expires_at INTEGER,
-        token_type TEXT,
-        scope TEXT,
-        id_token TEXT,
-        session_state TEXT,
-        UNIQUE(provider, providerAccountId)
-      `
-    });
-
-    // 创建VerificationToken表
-    console.log('创建VerificationToken表...');
-    await supabase.rpc('create_table_if_not_exists', {
-      table_name: 'VerificationToken',
-      table_definition: `
-        identifier TEXT,
-        token TEXT UNIQUE,
-        expires TIMESTAMP,
-        UNIQUE(identifier, token)
-      `
-    });
-
-    // 创建其他表
-    // 创建Page表
-    console.log('创建Page表...');
+    // Create Page table
+    console.log('Creating Page table...');
     await supabase.rpc('create_table_if_not_exists', {
       table_name: 'Page',
-      table_definition: `
+      definition: `
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        slug TEXT UNIQUE,
-        title TEXT,
-        content TEXT,
+        title TEXT NOT NULL,
+        slug TEXT UNIQUE NOT NULL,
+        content TEXT NOT NULL,
         description TEXT,
-        createdAt TIMESTAMP DEFAULT NOW(),
-        updatedAt TIMESTAMP DEFAULT NOW(),
-        createdById UUID REFERENCES User(id),
-        lastEditedById UUID REFERENCES User(id),
-        version INTEGER DEFAULT 1,
-        isPublished BOOLEAN DEFAULT TRUE,
-        viewCount INTEGER DEFAULT 0,
         category TEXT,
-        tags TEXT
+        tags TEXT,
+        viewCount INTEGER NOT NULL DEFAULT 0,
+        version INTEGER NOT NULL DEFAULT 1,
+        isPublished BOOLEAN NOT NULL DEFAULT true,
+        isDeleted BOOLEAN NOT NULL DEFAULT false,
+        createdById UUID REFERENCES "User"(id),
+        lastEditedById UUID REFERENCES "User"(id),
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+        updatedAt TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
       `
     });
 
-    // 创建PageEdit表
-    console.log('创建PageEdit表...');
+    // Create Page_createdById_fkey relationship
+    console.log('Creating Page_createdById_fkey relationship...');
+    await supabase.rpc('create_foreign_key_if_not_exists', {
+      table_name: 'Page',
+      column_name: 'createdById',
+      foreign_table: 'User',
+      foreign_column: 'id',
+      constraint_name: 'Page_createdById_fkey'
+    });
+
+    // Create Page_lastEditedById_fkey relationship
+    console.log('Creating Page_lastEditedById_fkey relationship...');
+    await supabase.rpc('create_foreign_key_if_not_exists', {
+      table_name: 'Page',
+      column_name: 'lastEditedById',
+      foreign_table: 'User',
+      foreign_column: 'id',
+      constraint_name: 'Page_lastEditedById_fkey'
+    });
+
+    // Create PageEdit table
+    console.log('Creating PageEdit table...');
     await supabase.rpc('create_table_if_not_exists', {
       table_name: 'PageEdit',
-      table_definition: `
+      definition: `
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        pageId UUID REFERENCES Page(id) ON DELETE CASCADE,
-        content TEXT,
-        title TEXT,
+        pageId UUID REFERENCES "Page"(id) NOT NULL,
+        userId UUID REFERENCES "User"(id) NOT NULL,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
         description TEXT,
-        createdAt TIMESTAMP DEFAULT NOW(),
-        userId UUID REFERENCES User(id) ON DELETE CASCADE,
-        status TEXT DEFAULT 'PENDING',
-        version INTEGER,
         summary TEXT,
-        diff TEXT
+        version INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'PENDING',
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
       `
     });
 
-    // 创建Comment表
-    console.log('创建Comment表...');
+    // Create Comment table
+    console.log('Creating Comment table...');
     await supabase.rpc('create_table_if_not_exists', {
       table_name: 'Comment',
-      table_definition: `
+      definition: `
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        content TEXT,
-        pagePath TEXT,
-        createdAt TIMESTAMP DEFAULT NOW(),
-        updatedAt TIMESTAMP DEFAULT NOW(),
-        userId UUID REFERENCES User(id) ON DELETE CASCADE
+        userId UUID REFERENCES "User"(id) NOT NULL,
+        pagePath TEXT NOT NULL,
+        content TEXT NOT NULL,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
       `
     });
 
-    // 创建ForumCategory表
-    console.log('创建ForumCategory表...');
+    // Create ForumCategory table
+    console.log('Creating ForumCategory table...');
     await supabase.rpc('create_table_if_not_exists', {
       table_name: 'ForumCategory',
-      table_definition: `
+      definition: `
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        name TEXT,
+        name TEXT NOT NULL,
+        slug TEXT UNIQUE NOT NULL,
         description TEXT,
-        slug TEXT UNIQUE,
-        order INTEGER DEFAULT 0,
-        createdAt TIMESTAMP DEFAULT NOW(),
-        updatedAt TIMESTAMP DEFAULT NOW(),
-        isActive BOOLEAN DEFAULT TRUE
+        order INTEGER NOT NULL DEFAULT 0,
+        isActive BOOLEAN NOT NULL DEFAULT true,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
       `
     });
 
-    // 创建ForumTopic表
-    console.log('创建ForumTopic表...');
+    // Create ForumTopic table
+    console.log('Creating ForumTopic table...');
     await supabase.rpc('create_table_if_not_exists', {
       table_name: 'ForumTopic',
-      table_definition: `
+      definition: `
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        title TEXT,
-        content TEXT,
-        categoryId UUID REFERENCES ForumCategory(id) ON DELETE CASCADE,
-        createdAt TIMESTAMP DEFAULT NOW(),
-        updatedAt TIMESTAMP DEFAULT NOW(),
-        userId UUID REFERENCES User(id) ON DELETE CASCADE,
-        viewCount INTEGER DEFAULT 0,
-        isPinned BOOLEAN DEFAULT FALSE,
-        isLocked BOOLEAN DEFAULT FALSE,
-        lastReplyAt TIMESTAMP
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        userId UUID REFERENCES "User"(id) NOT NULL,
+        categoryId UUID REFERENCES "ForumCategory"(id) NOT NULL,
+        viewCount INTEGER NOT NULL DEFAULT 0,
+        isPinned BOOLEAN NOT NULL DEFAULT false,
+        isLocked BOOLEAN NOT NULL DEFAULT false,
+        lastReplyAt TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+        updatedAt TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
       `
     });
 
-    // 创建ForumReply表
-    console.log('创建ForumReply表...');
+    // Create ForumReply table
+    console.log('Creating ForumReply table...');
     await supabase.rpc('create_table_if_not_exists', {
       table_name: 'ForumReply',
-      table_definition: `
+      definition: `
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        content TEXT,
-        topicId UUID REFERENCES ForumTopic(id) ON DELETE CASCADE,
-        createdAt TIMESTAMP DEFAULT NOW(),
-        updatedAt TIMESTAMP DEFAULT NOW(),
-        userId UUID REFERENCES User(id) ON DELETE CASCADE,
-        isEdited BOOLEAN DEFAULT FALSE
+        content TEXT NOT NULL,
+        userId UUID REFERENCES "User"(id) NOT NULL,
+        topicId UUID REFERENCES "ForumTopic"(id) NOT NULL,
+        createdAt TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+        updatedAt TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
       `
     });
 
-    // 创建初始管理员
-    console.log('创建初始管理员用户...');
-    const adminPassword = await bcrypt.hash('admin123', 10);
-    
-    // 检查是否已存在管理员
-    const { data: existingAdmin } = await supabase
-      .from('User')
-      .select('*')
-      .eq('email', 'admin@example.com')
-      .single();
-    
-    if (!existingAdmin) {
-      const { data: admin, error } = await supabase
-        .from('User')
-        .insert([
-          {
-            name: '管理员',
-            email: 'admin@example.com',
-            password: adminPassword,
-            role: 'ADMIN'
-          }
-        ])
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('创建管理员失败:', error);
-      } else {
-        console.log('管理员用户已创建:', admin.name);
-      }
-    } else {
-      console.log('管理员用户已存在，跳过创建');
-    }
-
-    // 创建函数来增加页面浏览量
-    console.log('创建页面浏览量增加函数...');
-    await supabase.rpc('create_increment_page_view_function', {
-      function_definition: `
-        CREATE OR REPLACE FUNCTION increment_page_view(page_slug TEXT) 
+    // Create functions for incrementing counts
+    console.log('Creating increment_page_view function...');
+    await supabase.rpc('create_function_if_not_exists', {
+      function_name: 'increment_page_view',
+      definition: `
+        CREATE OR REPLACE FUNCTION increment_page_view(page_slug TEXT)
         RETURNS VOID AS $$
         BEGIN
-          UPDATE "Page" SET "viewCount" = "viewCount" + 1 WHERE slug = page_slug;
+          UPDATE "Page"
+          SET "viewCount" = "viewCount" + 1
+          WHERE slug = page_slug;
         END;
         $$ LANGUAGE plpgsql;
       `
     });
 
-    // 创建函数来增加话题浏览量
-    console.log('创建话题浏览量增加函数...');
-    await supabase.rpc('create_increment_topic_view_function', {
-      function_definition: `
-        CREATE OR REPLACE FUNCTION increment_topic_view(topic_id UUID) 
+    console.log('Creating increment_topic_view function...');
+    await supabase.rpc('create_function_if_not_exists', {
+      function_name: 'increment_topic_view',
+      definition: `
+        CREATE OR REPLACE FUNCTION increment_topic_view(topic_id UUID)
         RETURNS VOID AS $$
         BEGIN
-          UPDATE "ForumTopic" SET "viewCount" = "viewCount" + 1 WHERE id = topic_id;
+          UPDATE "ForumTopic"
+          SET "viewCount" = "viewCount" + 1
+          WHERE id = topic_id;
         END;
         $$ LANGUAGE plpgsql;
       `
     });
 
-    console.log('数据库设置完成！');
+    console.log('✅ Database setup completed successfully!');
   } catch (error) {
-    console.error('数据库设置失败:', error);
-    process.exit(1);
+    console.error('❌ Database setup failed:', error);
   }
 }
 
+// Execute the setup
 setupDatabase();

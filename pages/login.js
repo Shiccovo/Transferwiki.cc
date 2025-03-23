@@ -32,8 +32,27 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!email || !password) {
-      setError('请填写所有字段');
+    // 验证表单
+    if (!email) {
+      setError('请输入电子邮箱');
+      return;
+    }
+    
+    if (!password) {
+      setError('请输入密码');
+      return;
+    }
+    
+    // 验证邮箱格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('请输入有效的电子邮箱地址');
+      return;
+    }
+    
+    // 验证密码长度
+    if (password.length < 6) {
+      setError('密码长度不能少于6个字符');
       return;
     }
     
@@ -41,18 +60,38 @@ export default function Login() {
       setLoading(true);
       setError('');
       
+      // 调用 NextAuth 进行凭证验证
       const result = await signIn('credentials', {
         redirect: false,
         email,
         password,
       });
       
+      // 检查登录结果
       if (result?.error) {
+        console.error('登录失败:', result.error);
         setError('邮箱或密码不正确');
-      } else {
-        router.push('/');
+        return;
       }
+      
+      if (!result?.ok) {
+        setError('登录失败，请稍后再试');
+        return;
+      }
+      
+      // 登录成功，直接重定向到首页
+      // NextAuth 会在重定向过程中自动设置会话 cookie
+      
+      // 登录成功日志
+      console.log('登录成功，正在重定向...');
+      
+      // 延迟一小段时间后重定向，确保 NextAuth 有足够时间设置 cookie
+      setTimeout(() => {
+        // 使用 window.location.href 进行硬重定向，强制浏览器重新加载页面
+        window.location.href = '/';
+      }, 1000);
     } catch (error) {
+      console.error('登录过程中发生错误:', error);
       setError('登录失败，请稍后再试');
     } finally {
       setLoading(false);
