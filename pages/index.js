@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import MainLayout from '../components/layout/MainLayout';
-import { prisma } from '../lib/prisma';
+import { pageOperations, forumOperations } from '../lib/db';
 
 export default function Home({ recentPages, popularTopics }) {
   const router = useRouter();
@@ -188,38 +188,10 @@ export default function Home({ recentPages, popularTopics }) {
 export async function getStaticProps() {
   try {
     // Get recent Wiki pages
-    const recentPages = await prisma.page.findMany({
-      where: {
-        isPublished: true
-      },
-      orderBy: {
-        updatedAt: 'desc'
-      },
-      take: 5,
-      include: {
-        lastEditedBy: {
-          select: {
-            name: true
-          }
-        }
-      }
-    });
+    const recentPages = await pageOperations.getAllPages(5);
 
     // Get popular forum topics
-    const popularTopics = await prisma.forumTopic.findMany({
-      orderBy: [
-        { isPinned: 'desc' },
-        { viewCount: 'desc' }
-      ],
-      take: 5,
-      include: {
-        replies: {
-          select: {
-            id: true
-          }
-        }
-      }
-    });
+    const popularTopics = await forumOperations.getPopularTopics(5);
 
     return {
       props: {

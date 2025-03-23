@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { prisma } from "../../../../lib/prisma";
+import { pageEditOperations } from "../../../../lib/db";
 import { authOptions } from "../../auth/[...nextauth]";
 
 export default async function handler(req, res) {
@@ -16,24 +16,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const pendingEdits = await prisma.pageEdit.findMany({
-        where: {
-          status: "PENDING",
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              image: true,
-            },
-          },
-        },
-      });
+      const pendingEdits = await pageEditOperations.getPendingEdits();
 
       return res.status(200).json(pendingEdits);
     } catch (error) {

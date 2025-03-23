@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { prisma } from "../../../../../lib/prisma";
+import { pageEditOperations } from "../../../../../lib/db";
 import { serialize } from 'next-mdx-remote/serialize';
 import { MDXRemote } from 'next-mdx-remote';
 import { authOptions } from "../../../auth/[...nextauth]";
@@ -20,16 +20,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       // Get the edit
-      const edit = await prisma.pageEdit.findUnique({
-        where: { id },
-        include: {
-          user: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      });
+      const edit = await pageEditOperations.getEditById(id);
 
       if (!edit) {
         return res.status(404).json({ error: 'Edit not found' });

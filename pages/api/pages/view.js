@@ -1,4 +1,4 @@
-import { prisma } from '../../../lib/prisma';
+import { pageOperations } from '../../../lib/db';
 
 export default async function handler(req, res) {
   // 只允许POST请求
@@ -14,18 +14,14 @@ export default async function handler(req, res) {
   
   try {
     // 更新页面的查看次数
-    const updatedPage = await prisma.page.update({
-      where: { slug },
-      data: {
-        viewCount: {
-          increment: 1
-        }
-      }
-    });
+    await pageOperations.incrementPageView(slug);
+    
+    // Get the updated view count
+    const page = await pageOperations.getPageBySlug(slug);
     
     return res.status(200).json({
       success: true,
-      viewCount: updatedPage.viewCount
+      viewCount: page.viewCount
     });
   } catch (error) {
     console.error('更新页面查看次数失败:', error);

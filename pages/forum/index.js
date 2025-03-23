@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import MainLayout from '../../components/layout/MainLayout';
 import ForumLayout from '../../components/layout/ForumLayout';
 import TopicCard from '../../components/forum/TopicCard';
-import { prisma } from '../../lib/prisma';
+import { forumOperations } from '../../lib/db';
 
 export default function ForumHome({ categories, topics }) {
   const [sortBy, setSortBy] = useState('latest');
@@ -160,42 +160,18 @@ export default function ForumHome({ categories, topics }) {
 export async function getServerSideProps() {
   try {
     // Get forum categories
-    const categories = await prisma.forumCategory.findMany({
-      where: {
-        isActive: true,
-      },
-      orderBy: {
-        order: 'asc',
-      },
-    });
+    const categories = await forumOperations.getAllCategories();
     
-    // Get forum topics
-    const topics = await prisma.forumTopic.findMany({
-      orderBy: [
-        { isPinned: 'desc' },
-        { updatedAt: 'desc' },
-      ],
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-          },
-        },
-        category: {
-          select: {
-            name: true,
-            slug: true,
-          },
-        },
-        replies: {
-          select: {
-            id: true,
-          },
-        },
-      },
-    });
+    // Get all topics (simplified - in a real app you'd implement pagination)
+    const topics = [];
+    
+    // Get topics from each category
+    if (categories && categories.length > 0) {
+      for (const category of categories) {
+        const categoryTopics = await forumOperations.getTopicsByCategory(category.id);
+        topics.push(...categoryTopics);
+      }
+    }
     
     return {
       props: {

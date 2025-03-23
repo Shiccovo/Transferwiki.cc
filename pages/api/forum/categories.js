@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { prisma } from "../../../lib/prisma";
+import { forumOperations } from "../../../lib/db";
 import { authOptions } from "../auth/[...nextauth]";
 
 export default async function handler(req, res) {
@@ -8,14 +8,7 @@ export default async function handler(req, res) {
   // Get all categories (GET)
   if (req.method === 'GET') {
     try {
-      const categories = await prisma.forumCategory.findMany({
-        where: {
-          isActive: true,
-        },
-        orderBy: {
-          order: 'asc',
-        },
-      });
+      const categories = await forumOperations.getAllCategories();
       
       return res.status(200).json(categories);
     } catch (error) {

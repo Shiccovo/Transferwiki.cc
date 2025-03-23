@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { prisma } from "../../../lib/prisma";
+import { commentOperations } from "../../../lib/db";
 import { authOptions } from "../auth/[...nextauth]";
 
 export default async function handler(req, res) {
@@ -13,23 +13,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Missing pagePath parameter" });
       }
 
-      const comments = await prisma.comment.findMany({
-        where: {
-          pagePath,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-        },
-      });
+      const comments = await commentOperations.getCommentsByPage(pagePath);
 
       return res.status(200).json(comments);
     } catch (error) {
@@ -50,21 +34,10 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
-      const comment = await prisma.comment.create({
-        data: {
-          content,
-          pagePath,
-          userId: session.user.id,
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-        },
+      const comment = await commentOperations.createComment({
+        content,
+        pagePath,
+        userId: session.user.id,
       });
 
       return res.status(201).json(comment);

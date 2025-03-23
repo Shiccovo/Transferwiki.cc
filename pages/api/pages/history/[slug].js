@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
-import { prisma } from '../../../../lib/prisma';
+import { pageOperations, pageEditOperations } from '../../../../lib/db';
 
 export default async function handler(req, res) {
   // 只允许GET请求
@@ -19,10 +19,7 @@ export default async function handler(req, res) {
     const session = await getServerSession(req, res, authOptions);
     
     // 查找页面
-    const page = await prisma.page.findUnique({
-      where: { slug },
-      select: { id: true, isPublished: true, createdById: true }
-    });
+    const page = await pageOperations.getPageBySlug(slug);
     
     if (!page) {
       return res.status(404).json({ message: '页面不存在' });
@@ -46,31 +43,16 @@ export default async function handler(req, res) {
     const offset = parseInt(req.query.offset, 10) || 0;
     
     // 获取历史编辑记录
-    const [edits, total] = await Promise.all([
-      prisma.pageEdit.findMany({
-        where: { pageId: page.id },
-        orderBy: { createdAt: 'desc' },
-        take: limit,
-        skip: offset,
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-        },
-      }),
-      prisma.pageEdit.count({
-        where: { pageId: page.id },
-      }),
-    ]);
+    const edits = await pageEditOperations.getPageEdits(page.id);
+    const total = edits.length;
+    
+    // Apply pagination manually since we're getting all edits at once with Supabase
+    const pagedEdits = edits.slice(offset, offset + limit);
     
     // 普通用户只能看到已审核通过的编辑
-    let filteredEdits = edits;
+    let filteredEdits = pagedEdits;
     if (!session || (session.user.role !== 'ADMIN' && session.user.id !== page.createdById)) {
-      filteredEdits = edits.filter(edit => edit.status === 'APPROVED');
+      filteredEdits = pagedEdits.filter(edit => edit.status === 'APPROVED');
     }
     
     return res.status(200).json({

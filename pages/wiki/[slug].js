@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import MainLayout from '../../components/layout/MainLayout';
 import WikiLayout from '../../components/layout/WikiLayout';
 import MarkdownContent from '../../components/ui/MarkdownContent';
-import { prisma } from '../../lib/prisma';
+import { pageOperations } from '../../lib/db';
 
 export default function WikiPage({ page, error }) {
   const router = useRouter();
@@ -63,11 +63,8 @@ export default function WikiPage({ page, error }) {
 
 export async function getStaticPaths() {
   try {
-    const pages = await prisma.page.findMany({
-      where: { isPublished: true },
-      select: { slug: true },
-      take: 10, // 只预生成最新的10个页面
-    });
+    // 使用Supabase获取最新的页面
+    const pages = await pageOperations.getAllPages(10);
     
     const paths = pages.map((page) => ({
       params: { slug: page.slug },
@@ -90,26 +87,10 @@ export async function getStaticProps({ params }) {
   const { slug } = params;
   
   try {
-    const page = await prisma.page.findUnique({
-      where: { slug },
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-          },
-        },
-        lastEditedBy: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-          },
-        },
-      },
-    });
+    // 使用Supabase API获取页面
+    const page = await pageOperations.getPageBySlug(slug);
     
+    // 如果找不到页面或页面未发布
     if (!page || !page.isPublished) {
       return {
         props: {
@@ -117,6 +98,14 @@ export async function getStaticProps({ params }) {
         },
         revalidate: 60,
       };
+    }
+    
+    // 增加页面浏览量
+    try {
+      await pageOperations.incrementPageView(slug);
+    } catch (error) {
+      console.error('增加页面浏览量失败:', error);
+      // 不影响页面渲染，继续执行
     }
     
     return {

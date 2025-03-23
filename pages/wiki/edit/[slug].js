@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import MainLayout from '../../../components/layout/MainLayout';
 import WikiEditor from '../../../components/wiki/WikiEditor';
-import { prisma } from '../../../lib/prisma';
+import { pageOperations } from '../../../lib/db';
 
 export default function EditWikiPage({ page, error }) {
   const router = useRouter();
@@ -122,9 +122,8 @@ export async function getServerSideProps({ params, req }) {
   const { slug } = params;
   
   try {
-    const page = await prisma.page.findUnique({
-      where: { slug },
-    });
+    // 使用Supabase API获取页面
+    const page = await pageOperations.getPageBySlug(slug);
     
     if (!page) {
       return {

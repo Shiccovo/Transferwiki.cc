@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
-import { prisma } from '../../../lib/prisma';
+import { pageOperations, pageEditOperations } from '../../../lib/db';
+import { supabase } from '../../../lib/supabase';
 
 export default async function handler(req, res) {
   // 获取用户会话
@@ -34,55 +35,52 @@ async function getPages(req, res) {
       order = 'desc',
     } = req.query;
     
-    // 构建查询条件
-    const where = {
-      isPublished: true, // 默认只返回已发布页面
-    };
+    // 使用Supabase获取页面列表
+    let query = supabase
+      .from('Page')
+      .select(`
+        *,
+        createdBy:User!Page_createdById_fkey(*),
+        lastEditedBy:User!Page_lastEditedById_fkey(*)
+      `)
+      .eq('isPublished', true)
+      .order(sort, { ascending: order !== 'desc' })
+      .range(parseInt(offset, 10), parseInt(offset, 10) + parseInt(limit, 10) - 1);
     
     // 按分类筛选
     if (category) {
-      where.category = category;
+      query = query.eq('category', category);
     }
     
     // 按关键词搜索（标题、内容、描述）
+    // Supabase 不支持 OR 条件的简单写法，所以我们使用 ilike 进行文本搜索
     if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { content: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ];
+      // 使用 Postgres 的 ilike 操作符进行模糊搜索
+      query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%,description.ilike.%${search}%`);
     }
     
     // 执行查询
-    const [pages, total] = await Promise.all([
-      prisma.page.findMany({
-        where,
-        orderBy: { [sort]: order },
-        take: parseInt(limit, 10),
-        skip: parseInt(offset, 10),
-        include: {
-          createdBy: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-          lastEditedBy: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-        },
-      }),
-      prisma.page.count({ where }),
-    ]);
+    const { data: pages, error } = await query;
+    
+    if (error) {
+      throw error;
+    }
+    
+    // 获取总数（为了分页）
+    // Supabase 不支持像 Prisma 那样直接 count，我们需要单独查询
+    const { count, error: countError } = await supabase
+      .from('Page')
+      .select('*', { count: 'exact', head: true })
+      .eq('isPublished', true)
+      .maybeSingle();
+    
+    if (countError) {
+      throw countError;
+    }
     
     return res.status(200).json({
-      pages,
-      total,
+      pages: pages || [],
+      total: count || 0,
       limit: parseInt(limit, 10),
       offset: parseInt(offset, 10),
     });
@@ -103,46 +101,43 @@ async function createPage(req, res, user) {
     }
     
     // 检查slug是否已存在
-    const existingPage = await prisma.page.findUnique({
-      where: { slug },
-    });
+    const existingPage = await pageOperations.getPageBySlug(slug);
     
     if (existingPage) {
       return res.status(409).json({ message: '该URL路径已被使用，请选择其他标题' });
     }
     
+    // 准备页面数据
+    const pageData = {
+      title,
+      content,
+      description: description || '',
+      slug,
+      category: category || slug.split('/')[0] || 'general',
+      tags: tags || '',
+      createdById: user.id,
+      lastEditedById: user.id,
+      version: 1,
+      isPublished: true,
+      viewCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    
     // 创建新页面
-    const newPage = await prisma.page.create({
-      data: {
-        title,
-        content,
-        description,
-        slug,
-        category: category || slug.split('/')[0] || 'general',
-        tags: tags || '',
-        createdBy: {
-          connect: { id: user.id },
-        },
-        lastEditedBy: {
-          connect: { id: user.id },
-        },
-        version: 1,
-        isPublished: true,
-      },
-    });
+    const newPage = await pageOperations.createPage(pageData);
     
     // 创建初始版本记录
-    await prisma.pageEdit.create({
-      data: {
-        pageId: newPage.id,
-        content,
-        title,
-        description,
-        userId: user.id,
-        version: 1,
-        status: 'APPROVED',
-        summary: '初始创建',
-      },
+    await pageEditOperations.createPageEdit({
+      pageId: newPage.id,
+      content,
+      title,
+      description: description || '',
+      userId: user.id,
+      version: 1,
+      status: 'APPROVED',
+      summary: '初始创建',
+      createdAt: new Date().toISOString(),
     });
     
     return res.status(201).json(newPage);

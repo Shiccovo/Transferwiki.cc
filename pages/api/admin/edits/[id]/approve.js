@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { prisma } from "../../../../../lib/prisma";
+import { pageEditOperations } from "../../../../../lib/db";
 import path from 'path';
 import fs from 'fs';
 import { authOptions } from "../../../auth/[...nextauth]";
@@ -20,9 +20,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
       // Get the edit
-      const edit = await prisma.pageEdit.findUnique({
-        where: { id },
-      });
+      const edit = await pageEditOperations.getEditById(id);
 
       if (!edit) {
         return res.status(404).json({ error: 'Edit not found' });
@@ -46,10 +44,7 @@ export default async function handler(req, res) {
       fs.writeFileSync(filePath, edit.content, 'utf8');
       
       // Update edit status
-      await prisma.pageEdit.update({
-        where: { id },
-        data: { status: "APPROVED" },
-      });
+      await pageEditOperations.updateEditStatus(id, "APPROVED");
 
       return res.status(200).json({ message: 'Edit approved and applied successfully' });
     } catch (error) {

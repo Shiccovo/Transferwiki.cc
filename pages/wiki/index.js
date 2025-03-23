@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import MainLayout from '../../components/layout/MainLayout';
-import { prisma } from '../../lib/prisma';
+import { pageOperations } from '../../lib/db';
 
 // Wiki首页组件
 export default function WikiHomePage({ initialCategories, initialPages, error }) {
@@ -241,39 +241,19 @@ export default function WikiHomePage({ initialCategories, initialPages, error })
 
 export async function getStaticProps() {
   try {
-    // 获取所有已发布页面
-    const pages = await prisma.page.findMany({
-      where: {
-        isPublished: true,
-      },
-      orderBy: {
-        updatedAt: 'desc',
-      },
-      include: {
-        lastEditedBy: {
-          select: {
-            name: true,
-          },
-        },
-      },
-      take: 20, // 限制返回页数
+    // 使用Supabase API获取所有已发布页面
+    const pages = await pageOperations.getAllPages(20);
+    
+    // 提取分类数据
+    // 由于Supabase没有Prisma的distinct查询，我们需要手动处理
+    const categorySet = new Set();
+    pages.forEach(page => {
+      if (page.category) {
+        categorySet.add(page.category);
+      }
     });
     
-    // 获取所有可能的分类
-    const allCategories = await prisma.page.findMany({
-      where: {
-        isPublished: true,
-        NOT: { category: null },
-      },
-      select: {
-        category: true,
-      },
-      distinct: ['category'],
-    });
-    
-    const categories = allCategories
-      .map(page => page.category)
-      .filter(category => category); // 过滤掉空值
+    const categories = Array.from(categorySet);
     
     return {
       props: {

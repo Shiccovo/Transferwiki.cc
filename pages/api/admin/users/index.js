@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { prisma } from "../../../../lib/prisma";
+import { userOperations } from "../../../../lib/db";
 import { authOptions } from "../../auth/[...nextauth]";
 
 export default async function handler(req, res) {
@@ -16,18 +16,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const users = await prisma.user.findMany({
-        orderBy: {
-          name: 'asc',
-        },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          image: true,
-          role: true,
-        },
-      });
+      const users = await userOperations.getAllUsers();
 
       return res.status(200).json(users);
     } catch (error) {

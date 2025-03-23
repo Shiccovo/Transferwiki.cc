@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import MainLayout from '../../../components/layout/MainLayout';
-import { prisma } from '../../../lib/prisma';
+import { pageOperations, pageEditOperations } from '../../../lib/db';
 
 // 页面历史记录查看页面
 export default function WikiHistoryPage({ page, initialEdits, total, error }) {
@@ -273,17 +273,8 @@ export async function getServerSideProps({ params }) {
   const { slug } = params;
   
   try {
-    // 获取页面信息
-    const page = await prisma.page.findUnique({
-      where: { slug },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        isPublished: true,
-        createdById: true,
-      },
-    });
+    // 使用Supabase API获取页面
+    const page = await pageOperations.getPageBySlug(slug);
     
     if (!page) {
       return {
@@ -294,34 +285,19 @@ export async function getServerSideProps({ params }) {
     }
     
     // 获取历史编辑记录（第一页）
-    const limit = 10;
-    const offset = 0;
+    // 使用Supabase API获取编辑记录
+    const edits = await pageEditOperations.getPageEdits(page.id);
     
-    const [edits, total] = await Promise.all([
-      prisma.pageEdit.findMany({
-        where: { pageId: page.id },
-        orderBy: { createdAt: 'desc' },
-        take: limit,
-        skip: offset,
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-        },
-      }),
-      prisma.pageEdit.count({
-        where: { pageId: page.id },
-      }),
-    ]);
+    // 由于Supabase没有像Prisma那样的count API，我们直接用获取到的数组长度
+    const total = edits.length;
+    
+    // 只返回前10条记录作为第一页
+    const firstPageEdits = edits.slice(0, 10);
     
     return {
       props: {
         page: JSON.parse(JSON.stringify(page)),
-        initialEdits: JSON.parse(JSON.stringify(edits)),
+        initialEdits: JSON.parse(JSON.stringify(firstPageEdits)),
         total,
       },
     };

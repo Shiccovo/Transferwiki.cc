@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { prisma } from "../../../../../lib/prisma";
+import { pageEditOperations } from "../../../../../lib/db";
 import { authOptions } from "../../../auth/[...nextauth]";
 
 export default async function handler(req, res) {
@@ -18,10 +18,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
       // Update edit status
-      const edit = await prisma.pageEdit.update({
-        where: { id },
-        data: { status: "REJECTED" },
-      });
+      const edit = await pageEditOperations.updateEditStatus(id, "REJECTED");
 
       if (!edit) {
         return res.status(404).json({ error: 'Edit not found' });
