@@ -3,6 +3,7 @@ import { SessionProvider } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import '../styles/globals.css';
+import '../styles/quill.css';
 
 export default function App({ Component, pageProps }) {
   const [mounted, setMounted] = useState(false);

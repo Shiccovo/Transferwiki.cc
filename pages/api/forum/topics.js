@@ -10,49 +10,23 @@ export default async function handler(req, res) {
     try {
       const { category, query } = req.query;
       
-      // 构建查询条件
-      const where = {};
+      // 基本查询条件
+      let topics = [];
       
       if (category) {
-        const categoryObject = await prisma.forumCategory.findUnique({
-          where: { slug: category },
-        });
+        // 通过分类slug获取话题
+        const categoryObject = await forumOperations.getCategoryBySlug(category);
         
         if (categoryObject) {
-          where.categoryId = categoryObject.id;
+          topics = await forumOperations.getTopicsByCategory(categoryObject.id);
         }
+      } else if (query) {
+        // 搜索功能实现
+        topics = await forumOperations.searchTopics(query);
+      } else {
+        // 获取所有话题
+        topics = await forumOperations.getAllTopics();
       }
-      
-      if (query) {
-        where.OR = [
-          { title: { contains: query } },
-          { content: { contains: query } },
-        ];
-      }
-      
-      // 获取话题
-      const topics = await prisma.forumTopic.findMany({
-        where,
-        orderBy: [
-          { isPinned: 'desc' },
-          { updatedAt: 'desc' },
-        ],
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-          category: true,
-          replies: {
-            select: {
-              id: true,
-            },
-          },
-        },
-      });
       
       return res.status(200).json(topics);
     } catch (error) {
@@ -74,24 +48,15 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: '缺少必要字段' });
       }
       
-      // 验证分类是否存在
-      const category = await prisma.forumCategory.findUnique({
-        where: { id: categoryId },
-      });
-      
-      if (!category) {
-        return res.status(400).json({ error: '分类不存在' });
-      }
-      
       // 创建新话题
-      const newTopic = await prisma.forumTopic.create({
-        data: {
-          title,
-          content,
-          categoryId,
-          userId: session.user.id,
-          lastReplyAt: new Date(),
-        },
+      const newTopic = await forumOperations.createTopic({
+        title,
+        content,
+        categoryId,
+        userId: session.user.id,
+        lastReplyAt: new Date().toISOString(),
+        isPinned: false,
+        viewCount: 0
       });
       
       return res.status(201).json(newTopic);

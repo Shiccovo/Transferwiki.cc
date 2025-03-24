@@ -1,8 +1,19 @@
 // 将 MDX 文件内容迁移到数据库中
 const fs = require('fs').promises;
 const path = require('path');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
+
+// 创建 Supabase 客户端
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('缺少 Supabase URL 或 API key');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // 默认管理员ID - 应当是已创建的用户
 const DEFAULT_ADMIN_ID = process.env.DEFAULT_ADMIN_ID || '';
@@ -95,27 +106,45 @@ async function migrateFileToDatabase(mapping) {
     }
     
     // 检查页面是否已存在
-    const existingPage = await prisma.page.findUnique({
-      where: { slug: mapping.slug },
-    });
+    const { data: existingPage, error: findError } = await supabase
+      .from('Page')
+      .select('*')
+      .eq('slug', mapping.slug)
+      .single();
+    
+    if (findError && findError.code !== 'PGRST116') {
+      console.error(`查找页面 ${mapping.slug} 出错:`, findError);
+      return;
+    }
+    
+    const now = new Date().toISOString();
     
     if (existingPage) {
       console.log(`页面已存在，更新内容: ${mapping.slug}`);
       // 更新现有页面
-      await prisma.page.update({
-        where: { slug: mapping.slug },
-        data: {
+      const { data: updatedPage, error: updateError } = await supabase
+        .from('Page')
+        .update({
           title,
           description,
           content,
-          version: { increment: 1 },
+          version: existingPage.version + 1,
           lastEditedById: DEFAULT_ADMIN_ID,
-        },
-      });
+          updatedAt: now
+        })
+        .eq('id', existingPage.id)
+        .select()
+        .single();
+      
+      if (updateError) {
+        console.error(`更新页面 ${mapping.slug} 出错:`, updateError);
+        return;
+      }
       
       // 记录编辑历史
-      await prisma.pageEdit.create({
-        data: {
+      const { error: createEditError } = await supabase
+        .from('PageEdit')
+        .insert([{
           pageId: existingPage.id,
           content,
           title,
@@ -124,13 +153,19 @@ async function migrateFileToDatabase(mapping) {
           version: existingPage.version + 1,
           status: 'APPROVED',
           summary: '从MDX文件迁移',
-        },
-      });
+          createdAt: now
+        }]);
+      
+      if (createEditError) {
+        console.error(`创建编辑历史 ${mapping.slug} 出错:`, createEditError);
+        return;
+      }
     } else {
       console.log(`创建新页面: ${mapping.slug}`);
       // 创建新页面
-      const newPage = await prisma.page.create({
-        data: {
+      const { data: newPage, error: createPageError } = await supabase
+        .from('Page')
+        .insert([{
           slug: mapping.slug,
           title,
           description,
@@ -140,12 +175,22 @@ async function migrateFileToDatabase(mapping) {
           version: 1,
           isPublished: true,
           category: mapping.slug.split('/')[0],
-        },
-      });
+          viewCount: 0,
+          createdAt: now,
+          updatedAt: now
+        }])
+        .select()
+        .single();
+      
+      if (createPageError) {
+        console.error(`创建页面 ${mapping.slug} 出错:`, createPageError);
+        return;
+      }
       
       // 记录首次编辑历史
-      await prisma.pageEdit.create({
-        data: {
+      const { error: createEditError } = await supabase
+        .from('PageEdit')
+        .insert([{
           pageId: newPage.id,
           content,
           title,
@@ -154,8 +199,13 @@ async function migrateFileToDatabase(mapping) {
           version: 1,
           status: 'APPROVED',
           summary: '初始内容导入',
-        },
-      });
+          createdAt: now
+        }]);
+      
+      if (createEditError) {
+        console.error(`创建编辑历史 ${mapping.slug} 出错:`, createEditError);
+        return;
+      }
     }
     
     console.log(`成功导入: ${mapping.slug}`);
@@ -170,11 +220,13 @@ async function migrateAllContent() {
     console.log('开始内容迁移...');
     
     // 检查管理员用户是否存在
-    const adminUser = await prisma.user.findUnique({
-      where: { id: DEFAULT_ADMIN_ID },
-    });
+    const { data: adminUser, error: userError } = await supabase
+      .from('User')
+      .select('*')
+      .eq('id', DEFAULT_ADMIN_ID)
+      .single();
     
-    if (!adminUser) {
+    if (userError || !adminUser) {
       console.error('指定的管理员ID不存在，请确保用户已创建');
       process.exit(1);
     }
@@ -189,8 +241,6 @@ async function migrateAllContent() {
     console.log('内容迁移完成！');
   } catch (error) {
     console.error('迁移过程中出错:', error);
-  } finally {
-    await prisma.$disconnect();
   }
 }
 

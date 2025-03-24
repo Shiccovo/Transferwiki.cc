@@ -12,7 +12,10 @@
     "export": "next build && next export",
     "setup": "node scripts/setup-supabase.js",
     "db:create-admin": "node scripts/create-admin.js",
-    "db:migrate-content": "node scripts/migrate-content.js"
+    "db:migrate-content": "node scripts/migrate-content.js",
+    "forum:setup": "node scripts/create-forum-categories.js",
+    "forum:simple": "node scripts/add-categories-simple.js",
+    "forum:fix-reply": "node scripts/add-isEdited-column.js"
   },
   "repository": {
     "type": "git",
@@ -32,6 +35,7 @@
     "@supabase/supabase-js": "^2.49.1",
     "@types/bcrypt": "^5.0.2",
     "bcrypt": "^5.1.1",
+    "dotenv": "^16.4.7",
     "framer-motion": "^10.16.4",
     "mongodb": "^6.3.0",
     "mongoose": "^8.0.3",
@@ -43,6 +47,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.49.2",
+    "react-quill": "^2.0.0",
     "rehype-autolink-headings": "^7.1.0",
     "rehype-prism-plus": "^2.0.0",
     "rehype-slug": "^6.0.0",

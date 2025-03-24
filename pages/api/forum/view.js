@@ -13,23 +13,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 查找话题
-    const topic = await prisma.forumTopic.findUnique({
-      where: { id },
-      select: { id: true, viewCount: true },
-    });
+    // 使用forumOperations中的方法增加浏览量
+    const success = await forumOperations.incrementTopicView(id);
     
-    if (!topic) {
-      return res.status(404).json({ error: '话题不存在' });
+    if (!success) {
+      return res.status(404).json({ error: '话题不存在或增加浏览量失败' });
     }
-    
-    // 更新话题浏览量
-    await prisma.forumTopic.update({
-      where: { id: topic.id },
-      data: {
-        viewCount: topic.viewCount + 1,
-      },
-    });
     
     return res.status(200).json({ success: true });
   } catch (error) {

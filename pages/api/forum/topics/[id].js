@@ -1,41 +1,21 @@
 import { getServerSession } from "next-auth";
 import { forumOperations } from "../../../../lib/db";
 import { authOptions } from "../../auth/[...nextauth]";
+import { supabase } from "../../../../lib/supabase";
 
 export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions);
   const { id } = req.query;
 
+  if (!id) {
+    return res.status(400).json({ error: '缺少ID参数' });
+  }
+
   // Get topic (GET)
   if (req.method === 'GET') {
     try {
-      const topic = await prisma.forumTopic.findUnique({
-        where: { id },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-              createdAt: true,
-            },
-          },
-          category: true,
-          replies: {
-            orderBy: { createdAt: 'asc' },
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  image: true,
-                  createdAt: true,
-                },
-              },
-            },
-          },
-        },
-      });
+      // 使用forumOperations获取话题详情
+      const topic = await forumOperations.getTopicById(id);
       
       if (!topic) {
         return res.status(404).json({ error: '话题不存在' });
@@ -62,12 +42,14 @@ export default async function handler(req, res) {
       }
       
       // 查找话题
-      const topic = await prisma.forumTopic.findUnique({
-        where: { id },
-        select: { userId: true, isLocked: true },
-      });
+      const { data: topic, error: fetchError } = await supabase
+        .from('ForumTopic')
+        .select('userId, isLocked')
+        .eq('id', id)
+        .single();
       
-      if (!topic) {
+      if (fetchError || !topic) {
+        console.error('获取话题失败:', fetchError);
         return res.status(404).json({ error: '话题不存在' });
       }
       
@@ -81,14 +63,21 @@ export default async function handler(req, res) {
       }
       
       // 更新话题
-      const updatedTopic = await prisma.forumTopic.update({
-        where: { id },
-        data: {
+      const { data: updatedTopic, error: updateError } = await supabase
+        .from('ForumTopic')
+        .update({
           title,
           content,
-          updatedAt: new Date(),
-        },
-      });
+          updatedAt: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (updateError) {
+        console.error('更新话题失败:', updateError);
+        return res.status(500).json({ error: '更新话题失败' });
+      }
       
       return res.status(200).json(updatedTopic);
     } catch (error) {
@@ -105,12 +94,14 @@ export default async function handler(req, res) {
     
     try {
       // 查找话题
-      const topic = await prisma.forumTopic.findUnique({
-        where: { id },
-        select: { userId: true },
-      });
+      const { data: topic, error: fetchError } = await supabase
+        .from('ForumTopic')
+        .select('userId')
+        .eq('id', id)
+        .single();
       
-      if (!topic) {
+      if (fetchError || !topic) {
+        console.error('获取话题失败:', fetchError);
         return res.status(404).json({ error: '话题不存在' });
       }
       
@@ -119,10 +110,27 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: '无权删除该话题' });
       }
       
+      // 先删除所有相关回复
+      const { error: deleteRepliesError } = await supabase
+        .from('ForumReply')
+        .delete()
+        .eq('topicId', id);
+      
+      if (deleteRepliesError) {
+        console.error('删除回复失败:', deleteRepliesError);
+        return res.status(500).json({ error: '删除话题相关回复失败' });
+      }
+      
       // 删除话题
-      await prisma.forumTopic.delete({
-        where: { id },
-      });
+      const { error: deleteTopicError } = await supabase
+        .from('ForumTopic')
+        .delete()
+        .eq('id', id);
+      
+      if (deleteTopicError) {
+        console.error('删除话题失败:', deleteTopicError);
+        return res.status(500).json({ error: '删除话题失败' });
+      }
       
       return res.status(200).json({ success: true });
     } catch (error) {

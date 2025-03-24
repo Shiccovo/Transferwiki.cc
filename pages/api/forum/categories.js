@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { forumOperations } from "../../../lib/db";
 import { authOptions } from "../auth/[...nextauth]";
+import { supabase } from "../../../lib/supabase";
 
 export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions);
@@ -24,30 +25,39 @@ export default async function handler(req, res) {
     }
     
     try {
-      const { name, description, slug, order } = req.body;
+      const { name, description, slug, order, color } = req.body;
       
       if (!name || !slug) {
         return res.status(400).json({ error: '缺少必要字段' });
       }
       
       // 检查slug是否已存在
-      const existingCategory = await prisma.forumCategory.findUnique({
-        where: { slug },
-      });
+      const { data: existingCategory } = await supabase
+        .from('ForumCategory')
+        .select('*')
+        .eq('slug', slug)
+        .single();
       
       if (existingCategory) {
         return res.status(400).json({ error: '分类已存在' });
       }
       
       // 创建新分类
-      const newCategory = await prisma.forumCategory.create({
-        data: {
-          name,
-          description,
-          slug,
-          order: order || 0,
-        },
-      });
+      const { data: newCategory, error } = await supabase
+        .from('ForumCategory')
+        .insert([
+          {
+            name,
+            description,
+            slug,
+            order: order || 0,
+            color
+          }
+        ])
+        .select()
+        .single();
+      
+      if (error) throw error;
       
       return res.status(201).json(newCategory);
     } catch (error) {

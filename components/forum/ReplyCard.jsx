@@ -113,7 +113,12 @@ export default function ReplyCard({ reply, onEdit, onDelete, isFirst = false }) 
               </div>
             ) : (
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                <MarkdownContent content={reply.content} />
+                {/* 如果内容是HTML格式，使用dangerouslySetInnerHTML */}
+                {reply.content && reply.content.startsWith('<') ? (
+                  <div dangerouslySetInnerHTML={{ __html: reply.content }} />
+                ) : (
+                  <MarkdownContent content={reply.content} />
+                )}
               </div>
             )}
           </div>

@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { forumOperations } from "../../../lib/db";
 import { authOptions } from "../auth/[...nextauth]";
+import { supabase } from "../../../lib/supabase";
 
 export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions);
@@ -19,12 +20,14 @@ export default async function handler(req, res) {
       }
       
       // 验证话题是否存在
-      const topic = await prisma.forumTopic.findUnique({
-        where: { id: topicId },
-        select: { isLocked: true },
-      });
+      const { data: topic, error: topicError } = await supabase
+        .from('ForumTopic')
+        .select('isLocked')
+        .eq('id', topicId)
+        .single();
       
-      if (!topic) {
+      if (topicError || !topic) {
+        console.error('获取话题失败:', topicError);
         return res.status(404).json({ error: '话题不存在' });
       }
       
@@ -33,22 +36,19 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: '话题已锁定，无法回复' });
       }
       
-      // 创建回复
-      const newReply = await prisma.forumReply.create({
-        data: {
-          content,
-          topicId,
-          userId: session.user.id,
-        },
-      });
+      // 处理内容，确保它是合法的HTML或纯文本
+      let processedContent = content;
       
-      // 更新话题最后回复时间
-      await prisma.forumTopic.update({
-        where: { id: topicId },
-        data: {
-          lastReplyAt: new Date(),
-          updatedAt: new Date(),
-        },
+      // 如果内容是空的HTML，转换为简单文本
+      if (processedContent === '<p><br></p>' || processedContent === '<p></p>') {
+        processedContent = '';
+      }
+      
+      // 创建回复
+      const newReply = await forumOperations.createReply({
+        content: processedContent,
+        topicId,
+        userId: session.user.id,
       });
       
       return res.status(201).json(newReply);
