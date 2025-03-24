@@ -8,10 +8,23 @@ import dynamic from 'next/dynamic';
 import { PREDEFINED_CATEGORIES } from '../../components/forum/ForumCategories';
 
 // 动态导入富文本编辑器组件以避免SSR问题
-const RichTextEditor = dynamic(() => import('../../components/ui/RichTextEditor'), {
+const ReactQuill = dynamic(() => import('react-quill'), {
   ssr: false,
-  loading: () => <div className="h-64 w-full bg-gray-100 dark:bg-gray-800 animate-pulse rounded-md"></div>,
+  loading: () => <p>加载编辑器中...</p>,
 });
+
+const modules = {
+  toolbar: [
+    [{ 'header': [1, 2, false] }],
+    ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+    [{'list': 'ordered'}, {'list': 'bullet'}],
+    ['link', 'image'],
+    ['clean']
+  ],
+  clipboard: {
+    matchVisual: false
+  }
+};
 
 export default function CreateForumTopic() {
   const router = useRouter();
@@ -20,6 +33,8 @@ export default function CreateForumTopic() {
   const [errorMessage, setErrorMessage] = useState('');
   const [editorContent, setEditorContent] = useState('');
   const [categories, setCategories] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
@@ -213,11 +228,12 @@ export default function CreateForumTopic() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   内容 *
                 </label>
-                <RichTextEditor 
+                <ReactQuill
                   value={editorContent}
                   onChange={setEditorContent}
-                  placeholder="输入话题内容..."
-                  height="300px"
+                  modules={modules}
+                  theme="snow"
+                  placeholder="请输入内容..."
                 />
                 {errorMessage && errorMessage.includes('内容') && (
                   <p className="mt-1 text-sm text-red-600 dark:text-red-400">

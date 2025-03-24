@@ -4,6 +4,7 @@ import { useEffect, useState, createContext, useContext } from 'react';
 import { supabase } from '../lib/supabase';
 import '../styles/globals.css';
 import '../styles/quill.css';
+import { useRouter } from 'next/router';
 
 export const AuthContext = createContext();
 
@@ -13,6 +14,7 @@ export function useAuth() {
 
 export default function App({ Component, pageProps }) {
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -66,6 +68,25 @@ export default function App({ Component, pageProps }) {
     }
   }, [mounted]);
 
+  useEffect(() => {
+    const handleStart = () => {
+      // 可以添加加载指示器
+    };
+
+    const handleComplete = () => {
+      // 可以移除加载指示器
+    };
+
+    router.events.on('routeChangeStart', handleStart);
+    router.events.on('routeChangeComplete', handleComplete);
+    router.events.on('routeChangeError', handleComplete);
+
+    return () => {
+      router.events.off('routeChangeStart', handleStart);
+      router.events.off('routeChangeComplete', handleComplete);
+      router.events.off('routeChangeError', handleComplete);
+    };
+  }, [router]);
 
   return (
     <SessionProvider 
