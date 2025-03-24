@@ -1,9 +1,15 @@
 import { ThemeProvider } from 'next-themes';
 import { SessionProvider } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, createContext, useContext } from 'react';
 import { supabase } from '../lib/supabase';
 import '../styles/globals.css';
 import '../styles/quill.css';
+
+export const AuthContext = createContext();
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
 
 export default function App({ Component, pageProps }) {
   const [mounted, setMounted] = useState(false);

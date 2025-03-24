@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions);
   const { id } = req.query;
 
-  if (\!id) {
+  if (!id) {
     return res.status(400).json({ error: '缺少ID参数' });
   }
 
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
       
       if (error) throw error;
       
-      if (\!data) {
+      if (!data) {
         return res.status(404).json({ error: '分类不存在' });
       }
       
@@ -34,7 +34,7 @@ export default async function handler(req, res) {
 
   // Update category (PUT) - Admin only
   if (req.method === 'PUT') {
-    if (\!session || session.user.role \!== 'ADMIN') {
+    if (!session || session.user.role !== 'ADMIN') {
       return res.status(403).json({ error: '无权更新分类' });
     }
     
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
       const { name, description, slug, order, color } = req.body;
       
       // 验证必要字段
-      if (\!name || \!slug) {
+      if (!name || !slug) {
         return res.status(400).json({ error: '缺少必要字段' });
       }
       
@@ -85,7 +85,7 @@ export default async function handler(req, res) {
 
   // Delete category (DELETE) - Admin only
   if (req.method === 'DELETE') {
-    if (\!session || session.user.role \!== 'ADMIN') {
+    if (!session || session.user.role !== 'ADMIN') {
       return res.status(403).json({ error: '无权删除分类' });
     }
     
