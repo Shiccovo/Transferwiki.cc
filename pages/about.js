@@ -96,25 +96,25 @@ export default function About() {
       {/* 参与共建 */}
       <section className="py-16">
         <div className="container mx-auto px-4 text-center">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg border border-gray-200 dark:border-gray-700">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg border border-gray-200 dark:border-gray-700 max-w-5xl mx-auto">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
               加入知识共享计划
             </h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+            <p className="text-gray-600 dark:text-gray-300 mb-12 max-w-3xl mx-auto text-lg">
               本网站遵循<a href="https://creativecommons.org/licenses/by-sa/4.0/" className="text-blue-600 hover:underline">CC BY-SA 4.0协议</a>，欢迎通过以下方式参与内容建设：
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 border rounded-lg">
-                <div className="font-medium mb-2">贡献内容</div>
-                <p className="text-sm text-gray-500">编辑维基条目或提交录取案例</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                <div className="font-medium mb-3 text-xl">贡献内容</div>
+                <p className="text-sm text-gray-500 leading-relaxed">编辑维基条目或提交录取案例</p>
               </div>
-              <div className="p-4 border rounded-lg">
-                <div className="font-medium mb-2">参与讨论</div>
-                <p className="text-sm text-gray-500">加入我们的QQ群</p>
+              <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                <div className="font-medium mb-3 text-xl">参与讨论</div>
+                <p className="text-sm text-gray-500 leading-relaxed">加入我们的QQ群</p>
               </div>
-              <div className="p-4 border rounded-lg">
-                <div className="font-medium mb-2">宣传本站</div>
-                <p className="text-sm text-gray-500">发送给你需要的朋友</p>
+              <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+                <div className="font-medium mb-3 text-xl">宣传本站</div>
+                <p className="text-sm text-gray-500 leading-relaxed">发送给你需要的朋友</p>
               </div>
             </div>
           </div>
