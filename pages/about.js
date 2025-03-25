@@ -106,15 +106,15 @@ export default function About() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 border rounded-lg">
                 <div className="font-medium mb-2">贡献内容</div>
-                <p className="text-sm text-gray-500">编辑维基条目或提交案例</p>
+                <p className="text-sm text-gray-500">编辑维基条目或提交录取案例</p>
               </div>
               <div className="p-4 border rounded-lg">
                 <div className="font-medium mb-2">参与讨论</div>
-                <p className="text-sm text-gray-500">加入我们的Discord社区</p>
+                <p className="text-sm text-gray-500">加入我们的QQ群</p>
               </div>
               <div className="p-4 border rounded-lg">
-                <div className="font-medium mb-2">资助我们</div>
-                <p className="text-sm text-gray-500">支持服务器运营费用</p>
+                <div className="font-medium mb-2">宣传本站</div>
+                <p className="text-sm text-gray-500">发送给你需要的朋友</p>
               </div>
             </div>
           </div>
