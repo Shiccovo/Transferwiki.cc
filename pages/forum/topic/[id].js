@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -331,7 +331,7 @@ export async function getServerSideProps({ params }) {
       };
     }
     
-    // 增加浏览量
+    // 恢复这行
     await forumOperations.incrementTopicView(id);
     
     // 获取分类列表
@@ -345,7 +345,6 @@ export async function getServerSideProps({ params }) {
     };
   } catch (error) {
     console.error('Error fetching topic:', error);
-    
     return {
       notFound: true,
     };
