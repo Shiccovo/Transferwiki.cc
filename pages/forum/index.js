@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { forumOperations } from '../../lib/db';
 import MainLayout from '../../components/layout/MainLayout';
 import ForumLayout from '../../components/layout/ForumLayout';
+import { PREDEFINED_CATEGORIES } from '../../components/forum/ForumCategories';
 import TopicCard from '../../components/forum/TopicCard';
-import { forumOperations } from '../../lib/db';
 
 export default function ForumHome({ categories, topics }) {
   const [sortBy, setSortBy] = useState('latest');
@@ -31,7 +32,7 @@ export default function ForumHome({ categories, topics }) {
   
   return (
     <MainLayout>
-      <ForumLayout categories={categories}>
+      <ForumLayout categories={PREDEFINED_CATEGORIES}>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
           {/* Header */}
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
