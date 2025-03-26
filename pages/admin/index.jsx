@@ -63,7 +63,7 @@ export default function AdminDashboard() {
       // 获取所有用户
       const { data: allUsers, error: usersError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, email, name, role, created_at')
         .order('created_at', { ascending: false });
         
       if (!usersError) {
@@ -199,7 +199,7 @@ export default function AdminDashboard() {
                               页面路径: <span className="text-blue-600 dark:text-blue-400">{edit.pagePath}</span>
                             </h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400">
-                              提交者: {edit.user?.email?.split('@')[0] || '未知用户'} | 
+                              提交者: {edit.user?.name || '未知用户'} | 
                               提交时间: {new Date(edit.created_at).toLocaleString('zh-CN')}
                             </p>
                           </div>
@@ -274,17 +274,17 @@ export default function AdminDashboard() {
                                     <img 
                                       className="h-10 w-10 rounded-full" 
                                       src={user.avatar_url} 
-                                      alt={user.email?.split('@')[0]} 
+                                      alt={user.name || user.email?.split('@')[0]} 
                                     />
                                   ) : (
                                     <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                                      {user.email?.charAt(0).toUpperCase() || 'U'}
+                                      {user.name?.charAt(0).toUpperCase() || 'U'}
                                     </div>
                                   )}
                                 </div>
                                 <div className="ml-4">
                                   <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                    {user.email?.split('@')[0]}
+                                    {user.name || user.email?.split('@')[0]}
                                   </div>
                                 </div>
                               </div>
