@@ -5,6 +5,7 @@ import Link from 'next/link';
 import MainLayout from '../../../components/layout/MainLayout';
 import ForumLayout from '../../../components/layout/ForumLayout';
 import ReplyCard from '../../../components/forum/ReplyCard';
+import LikeButton from '../../../components/forum/LikeButton';
 import dynamic from 'next/dynamic';
 import { forumOperations } from '../../../lib/db';
 
@@ -110,9 +111,58 @@ export default function TopicView({ topic, categories }) {
             
             {/* 标题和作者信息 */}
             <div className="p-4 pb-0">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                {topic.title}
-              </h1>
+              <div className="flex justify-between items-start mb-4">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {topic.title}
+                </h1>
+                <div className="flex items-center space-x-4">
+                  <LikeButton topic={topic} />
+                  <div className="flex items-center space-x-2 px-4 py-2 rounded-md bg-gray-50 dark:bg-gray-700">
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className="h-5 w-5 text-gray-500" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" 
+                      />
+                    </svg>
+                    <span className="text-gray-600 dark:text-gray-300">
+                      {topic.replies?.length || 0}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2 px-4 py-2 rounded-md bg-gray-50 dark:bg-gray-700">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 text-gray-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      />
+                    </svg>
+                    <span className="text-gray-600 dark:text-gray-300">
+                      {topic.viewCount || 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
               
               <div className="flex flex-wrap items-center justify-between mb-4">
                 <div className="flex items-center space-x-2 mb-2">
@@ -141,8 +191,6 @@ export default function TopicView({ topic, categories }) {
                 </div>
                 
                 <div className="flex space-x-4 text-sm text-gray-600 dark:text-gray-400">
-                  <span>浏览: {topic.viewCount}</span>
-                  <span>回复: {topic.replies.length}</span>
                   
                   {/* 管理按钮 - 仅对管理员或作者显示 */}
                   {session && (session.user.role === 'ADMIN' || session.user.id === topic.userId) && (

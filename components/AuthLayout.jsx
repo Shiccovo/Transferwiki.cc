@@ -21,7 +21,7 @@ export default function AuthLayout({ children, title, subtitle, type = 'login' }
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <Link href="/" className="text-2xl font-bold text-blue-600 dark:text-blue-400 flex items-center">
-            TransferWiki.cc
+            Transferwiki.cc
           </Link>
         </div>
 

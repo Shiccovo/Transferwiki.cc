@@ -21,7 +21,7 @@ export default function ForumLayout({ children, categories = [] }) {
               <Link 
                 href="/forum"
                 className={`block px-3 py-2 rounded-md ${
-                  router.pathname === '/forum' 
+                  !router.query.category 
                   ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
@@ -32,9 +32,9 @@ export default function ForumLayout({ children, categories = [] }) {
               {categories.map(category => (
                 <Link 
                   key={category.id}
-                  href={`/forum/category/${category.slug}`}
+                  href={`/forum?category=${category.slug}`}
                   className={`block px-3 py-2 rounded-md ${
-                    router.query.slug === category.slug 
+                    router.query.category === category.slug 
                     ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
@@ -44,14 +44,7 @@ export default function ForumLayout({ children, categories = [] }) {
               ))}
             </nav>
             
-            <div className="mt-6">
-              <Link 
-                href="/forum/new"
-                className="block w-full px-4 py-2 text-center bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              >
-                发表新话题
-              </Link>
-            </div>
+
           </motion.div>
           
           <motion.div 
@@ -66,20 +59,15 @@ export default function ForumLayout({ children, categories = [] }) {
                 href="/wiki"
                 className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
-                Wiki主页
+                Wiki新人导航
               </Link>
-              <Link 
-                href="/wiki/search"
-                className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                搜索内容
-              </Link>
-              <Link 
+
+              {/* <Link 
                 href="/forum/latest"
                 className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 最新回复
-              </Link>
+              </Link> */}
             </nav>
           </motion.div>
         </div>

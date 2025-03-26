@@ -37,7 +37,7 @@ export default function Home({ recentPages, popularTopics }) {
           >
             <Link href="/wiki">
               <span className="px-6 py-3 bg-white text-blue-600 font-medium rounded-lg shadow-md hover:bg-gray-100 transition-colors duration-200">
-                浏览 Wiki
+                新人导航
               </span>
             </Link>
             <Link href="/forum">

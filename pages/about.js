@@ -42,6 +42,9 @@ export default function About() {
         <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
           加入我们的Discord社区(备用): <a href="https://discord.gg/6nYPs2xnjP" className="text-blue-600 hover:underline">https://discord.gg/6nYPs2xnjP</a>
         </p>
+        <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+          有任何建议可以联系开发者: admin@cloudo.dev  
+        </p>
         
       </section>
 

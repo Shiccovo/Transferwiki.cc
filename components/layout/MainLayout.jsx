@@ -164,7 +164,7 @@ export default function MainLayout({ children }) {
             {/* Left side: Logo and desktop navigation */}
             <div className="flex items-center">
               <Link href="/" className="font-bold text-xl text-gray-900 dark:text-white mr-8">
-                TransferWiki.cc
+                Transferwiki.cc
               </Link>
 
               {/* Desktop Navigation */}

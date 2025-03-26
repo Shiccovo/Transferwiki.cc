@@ -1,8 +1,29 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import LikeButton from './LikeButton';
 
 export default function TopicCard({ topic }) {
+  const [likes, setLikes] = useState(topic.likes || 0);
+
+  const handleLike = async () => {
+    try {
+      const response = await fetch(`/api/forum/topics/${topic.id}/like`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        setLikes(likes + 1);
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error);
+      }
+    } catch (error) {
+      console.error('Error liking topic:', error);
+      alert('点赞失败，请稍后再试');
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -51,18 +72,31 @@ export default function TopicCard({ topic }) {
                 {topic.content?.replace(/<[^>]*>/g, '') || ''}
               </p>
             </div>
-            
-            <div className="ml-4 flex flex-col items-center">
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-full w-12 h-12 flex items-center justify-center">
-                <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                  {topic.replies?.length || 0}
-                </span>
-              </div>
-              <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">回复</span>
-            </div>
           </div>
           
           <div className="flex items-center justify-between mt-4 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-3">
+            <div className="flex items-center space-x-4">
+              <LikeButton topic={topic} />
+              
+              <div className="flex items-center space-x-1">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-4 w-4" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" 
+                  />
+                </svg>
+                <span>{topic.replies?.length || 0}</span>
+              </div>
+            </div>
+
             <div className="flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -70,28 +104,6 @@ export default function TopicCard({ topic }) {
               <span style={{ color: topic.category?.color || '#6B7280' }}>
                 {topic.category?.name || '未分类'}
               </span>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                <span>{topic.viewCount || 0}</span>
-              </div>
-              
-              {topic.lastReplyAt && (
-                <div className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>最后回复：{new Date(topic.lastReplyAt).toLocaleDateString('zh-CN', {
-                    month: 'short',
-                    day: 'numeric'
-                  })}</span>
-                </div>
-              )}
             </div>
           </div>
         </div>
