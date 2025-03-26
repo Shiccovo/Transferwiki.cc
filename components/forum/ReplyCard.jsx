@@ -1,12 +1,51 @@
-import { useState } from 'react';
-import { useSession } from 'next-auth/react';
-import MarkdownContent from '../ui/MarkdownContent';
+import { useState, useEffect } from 'react';
+import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
+import dynamic from 'next/dynamic';
+import { formatDate } from '../../lib/utils';
 import { motion } from 'framer-motion';
+import MarkdownContent from '../ui/MarkdownContent';
+import Image from 'next/image';
+import { stringToColor } from '../../lib/utils';
+
+// 动态导入富文本编辑器组件以避免SSR问题
+const RichTextEditor = dynamic(() => import('../ui/RichTextEditor'), {
+  ssr: false,
+  loading: () => <div className="h-64 w-full bg-gray-100 dark:bg-gray-800 animate-pulse rounded-md"></div>,
+});
 
 export default function ReplyCard({ reply, onEdit, onDelete, isFirst = false }) {
-  const { data: session } = useSession();
+  const user = useUser();
+  const supabase = useSupabaseClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(reply.content);
+  const [userRole, setUserRole] = useState(null);
+  
+  // 加载用户角色
+  useEffect(() => {
+    async function getUserRole() {
+      if (user) {
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+            
+          if (data) {
+            setUserRole(data.role);
+          }
+        } catch (error) {
+          console.error('Error loading role:', error);
+        }
+      }
+    }
+    
+    getUserRole();
+  }, [user, supabase]);
+  
+  // 确保我们能正确获取回复用户的名称 - 使用profiles.name
+  const authorName = reply.profiles ? (reply.profiles.name || '未知用户') : '未知用户';
+  const replyUserColor = stringToColor(authorName);
   
   const handleEdit = () => {
     setIsEditing(true);
@@ -39,7 +78,7 @@ export default function ReplyCard({ reply, onEdit, onDelete, isFirst = false }) 
     }
   };
   
-  const canEdit = session && (session.user.id === reply.userId || session.user.role === 'ADMIN');
+  const canEdit = user && (user.id === reply.userId || userRole === 'ADMIN');
   
   return (
     <motion.div
@@ -51,51 +90,39 @@ export default function ReplyCard({ reply, onEdit, onDelete, isFirst = false }) 
       }`}
     >
       <div className="p-4">
-        <div className="flex items-start">
-          {/* User Avatar */}
-          <div className="mr-4">
-            {reply.user.image ? (
-              <img
-                src={reply.user.image}
-                alt={reply.user.name}
-                className="w-10 h-10 rounded-full"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                {reply.user.name?.charAt(0).toUpperCase() || 'U'}
-              </div>
-            )}
+        <div className="flex items-start space-x-4">
+          <div className="flex-shrink-0">
+            <img 
+              src={reply.profiles?.avatar_url || '/default-avatar.png'} 
+              alt={authorName}
+              className="h-10 w-10 rounded-full"
+            />
           </div>
-          
-          {/* Content */}
-          <div className="flex-1">
-            <div className="flex items-center mb-2">
-              <span className="font-medium text-gray-900 dark:text-white">
-                {reply.user.name}
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                {new Date(reply.createdAt).toLocaleString('zh-CN')}
-              </span>
-              {reply.isEdited && (
-                <span className="text-xs text-gray-500 dark:text-gray-400 ml-2 italic">
-                  (已编辑)
-                </span>
-              )}
-              {isFirst && (
-                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                  楼主
-                </span>
-              )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {authorName}
+                  {isFirst && (
+                    <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                      作者
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatDate(reply.createdAt)}
+                </p>
+              </div>
             </div>
             
             {isEditing ? (
               <div className="mb-2">
-                <textarea
+                <RichTextEditor
                   value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm dark:bg-gray-800 dark:text-white"
-                  rows={6}
-                ></textarea>
+                  onChange={setEditContent}
+                  placeholder="编辑回复内容..."
+                  height="200px"
+                />
                 <div className="flex justify-end space-x-2 mt-2">
                   <button
                     onClick={handleCancel}

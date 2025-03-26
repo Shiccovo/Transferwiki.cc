@@ -4,6 +4,10 @@ const nextConfig = {
   swcMinify: true,
   images: {
     unoptimized: true,
+    domains: [
+      'pvwvxslykvgalmvhfivv.supabase.co', // 移除 https://
+      'ui-avatars.com'
+    ],
   },
 
   // 自定义域名时不需要basePath和assetPrefix

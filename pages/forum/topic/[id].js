@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
 import Link from 'next/link';
 import MainLayout from '../../../components/layout/MainLayout';
 import ForumLayout from '../../../components/layout/ForumLayout';
@@ -8,6 +8,8 @@ import ReplyCard from '../../../components/forum/ReplyCard';
 import LikeButton from '../../../components/forum/LikeButton';
 import dynamic from 'next/dynamic';
 import { forumOperations } from '../../../lib/db';
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
+import MarkdownContent from '../../../components/ui/MarkdownContent';
 
 // 动态导入富文本编辑器组件以避免SSR问题
 const RichTextEditor = dynamic(() => import('../../../components/ui/RichTextEditor'), {
@@ -15,12 +17,48 @@ const RichTextEditor = dynamic(() => import('../../../components/ui/RichTextEdit
   loading: () => <div className="h-64 w-full bg-gray-100 dark:bg-gray-800 animate-pulse rounded-md"></div>,
 });
 
-export default function TopicView({ topic, categories }) {
+export default function TopicView({ topic: initialTopic, categories }) {
   const router = useRouter();
-  const { data: session } = useSession();
+  const user = useUser();
+  const supabase = useSupabaseClient();
   const [replyContent, setReplyContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [topic, setTopic] = useState(initialTopic);
+  const [isReplyPanelOpen, setIsReplyPanelOpen] = useState(false);
+  const [userRole, setUserRole] = useState(null);
+
+  // 使用useEffect来确保当初始topic更新时同步到state
+  useEffect(() => {
+    if (initialTopic) {
+      setTopic(initialTopic);
+      setIsLoading(false);
+    }
+  }, [initialTopic]);
+
+  // 加载用户角色
+  useEffect(() => {
+    async function getUserRole() {
+      if (user) {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+          
+          if (data) {
+            setUserRole(data.role);
+          }
+        } catch (error) {
+          console.error('获取用户角色失败:', error);
+        }
+      }
+    }
+    
+    getUserRole();
+  }, [user, supabase]);
 
   // 如果页面正在加载或者话题不存在
   if (router.isFallback || !topic) {
@@ -37,7 +75,7 @@ export default function TopicView({ topic, categories }) {
 
   // 提交回复
   const handleSubmitReply = async () => {
-    if (!session) {
+    if (!user) {
       router.push(`/login?redirect=${encodeURIComponent(router.asPath)}`);
       return;
     }
@@ -78,6 +116,85 @@ export default function TopicView({ topic, categories }) {
     }
   };
 
+  const fetchTopic = async () => {
+    if (!topic?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('ForumTopic')
+        .select(`
+          *,
+          profiles:userid (id, email, avatar_url, role, name)
+        `)
+        .eq('id', topic.id)
+        .single();
+      
+      if (error) throw error;
+      if (data) setTopic(data);
+    } catch (error) {
+      console.error('获取话题详情错误:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // 在组件内部添加删除帖子的函数
+  const handleDeleteTopic = async () => {
+    if (!user) {
+      router.push(`/login?redirect=${encodeURIComponent(router.asPath)}`);
+      return;
+    }
+
+    // 确认删除
+    if (!window.confirm('确定要删除这个话题吗？此操作不可撤销。')) {
+      return;
+    }
+
+    try {
+      // 检查用户是否是管理员或话题作者
+      const isAdmin = userRole === 'ADMIN';
+      const isAuthor = user.id === topic.profiles?.id;
+      
+      if (!isAdmin && !isAuthor) {
+        alert('您没有权限删除此话题');
+        return;
+      }
+
+      // 使用Supabase直接删除话题
+      const { error } = await supabase
+        .from('ForumTopic')
+        .delete()
+        .eq('id', topic.id);
+
+      if (error) throw error;
+
+      // 删除成功后重定向到论坛首页
+      router.push('/forum');
+    } catch (error) {
+      console.error('删除话题出错:', error);
+      alert('删除话题失败: ' + error.message);
+    }
+  };
+
+  // 在组件内添加用户名显示函数
+  const getUserDisplayName = (profile) => {
+    if (!profile) return '匿名用户';
+    
+    // 优先使用name，最后才考虑邮箱前缀
+    return profile.name || profile.email?.split('@')[0] || '匿名用户';
+  }
+
   return (
     <MainLayout>
       <ForumLayout categories={categories}>
@@ -95,16 +212,18 @@ export default function TopicView({ topic, categories }) {
                       </span>
                     </Link>
                   </li>
-                  <li>
-                    <div className="flex items-center">
-                      <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"></path></svg>
-                      <Link href={`/forum?category=${topic.category.slug}`}>
-                        <span className="ml-1 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
-                          {topic.category.name}
-                        </span>
-                      </Link>
-                    </div>
-                  </li>
+                  {topic.category && (
+                    <li>
+                      <div className="flex items-center">
+                        <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"></path></svg>
+                        <Link href={`/forum?category=${topic.category.slug}`}>
+                          <span className="ml-1 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                            {topic.category.name}
+                          </span>
+                        </Link>
+                      </div>
+                    </li>
+                  )}
                 </ol>
               </nav>
             </div>
@@ -112,132 +231,65 @@ export default function TopicView({ topic, categories }) {
             {/* 标题和作者信息 */}
             <div className="p-4 pb-0">
               <div className="flex justify-between items-start mb-4">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {topic.title}
-                </h1>
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 mr-3">
+                    <img 
+                      src={topic.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(topic.profiles?.email?.split('@')[0] || 'User')}&background=random`}
+                      alt={topic.profiles?.displayName || topic.profiles?.email?.split('@')[0] || '用户'} 
+                      className="w-10 h-10 rounded-full"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                      {topic.title}
+                    </h2>
+                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                      <span>
+                        由 {getUserDisplayName(topic.profiles)} 发布于 {formatDate(topic.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
                 <div className="flex items-center space-x-4">
                   <LikeButton topic={topic} />
-                  <div className="flex items-center space-x-2 px-4 py-2 rounded-md bg-gray-50 dark:bg-gray-700">
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      className="h-5 w-5 text-gray-500" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor"
+                  {user && (
+                    <button
+                      onClick={() => setIsReplyPanelOpen(true)}
+                      className="flex items-center space-x-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
                     >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" 
-                      />
-                    </svg>
-                    <span className="text-gray-600 dark:text-gray-300">
-                      {topic.replies?.length || 0}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2 px-4 py-2 rounded-md bg-gray-50 dark:bg-gray-700">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 text-gray-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                      />
-                    </svg>
-                    <span className="text-gray-600 dark:text-gray-300">
-                      {topic.viewCount || 0}
-                    </span>
-                  </div>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                      </svg>
+                      <span>回复</span>
+                    </button>
+                  )}
                 </div>
               </div>
               
-              <div className="flex flex-wrap items-center justify-between mb-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <img
-                    src={topic.user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(topic.user.name)}&background=random`}
-                    alt={topic.user.name}
-                    className="w-10 h-10 rounded-full"
-                  />
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white">
-                      {topic.user.name}
-                      <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                        楼主
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      发表于 {new Date(topic.createdAt).toLocaleDateString('zh-CN', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </div>
-                  </div>
-                </div>
-                
+              <div className="flex flex-wrap items-center justify-end mb-4">
                 <div className="flex space-x-4 text-sm text-gray-600 dark:text-gray-400">
                   
                   {/* 管理按钮 - 仅对管理员或作者显示 */}
-                  {session && (session.user.role === 'ADMIN' || session.user.id === topic.userId) && (
+                  {user && (user.role === 'ADMIN' || user.id === topic.profiles?.id) && (
                     <div className="flex space-x-2">
-                      <button 
-                        onClick={() => {
-                          // 编辑帖子
-                          const confirmEdit = window.confirm('确定要编辑这个帖子吗？');
-                          if (confirmEdit) {
-                            // 使用router跳转到编辑页面
-                            router.push(`/forum/edit/${topic.id}`);
-                          }
-                        }}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                      >
-                        编辑
-                      </button>
-                      
-                      {session.user.role === 'ADMIN' && (
-                        <button 
-                          onClick={() => {
-                            // 删除帖子
-                            const confirmDelete = window.confirm('确定要删除这个帖子吗？此操作不可撤销。');
-                            if (confirmDelete) {
-                              // 调用API删除
-                              fetch(`/api/forum/topics/${topic.id}`, {
-                                method: 'DELETE',
-                              })
-                              .then(response => {
-                                if (response.ok) {
-                                  // 删除成功，跳转到论坛首页
-                                  router.push('/forum');
-                                } else {
-                                  alert('删除失败，请重试');
-                                }
-                              })
-                              .catch(error => {
-                                console.error('删除话题失败:', error);
-                                alert('删除失败，请重试');
-                              });
-                            }
-                          }}
-                          className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-                        >
-                          删除
+                      <Link href={`/forum/edit/${topic.id}`}>
+                        <button className="flex items-center space-x-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          <span>编辑</span>
                         </button>
-                      )}
+                      </Link>
+                      
+                      <button
+                        onClick={handleDeleteTopic}
+                        className="flex items-center space-x-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>删除</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -246,7 +298,13 @@ export default function TopicView({ topic, categories }) {
             
             {/* 话题内容 */}
             <div className="p-6 pt-2 border-t border-gray-100 dark:border-gray-700">
-              <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: topic.content }} />
+              <div className="prose dark:prose-invert max-w-none">
+                {topic.content && topic.content.startsWith('<') ? (
+                  <div dangerouslySetInnerHTML={{ __html: topic.content }} />
+                ) : (
+                  <MarkdownContent content={topic.content} />
+                )}
+              </div>
             </div>
           </div>
           
@@ -318,18 +376,7 @@ export default function TopicView({ topic, categories }) {
             </div>
             
             <div className="p-6 space-y-4">
-              {!session ? (
-                <div className="text-center py-6">
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    请登录后发表回复
-                  </p>
-                  <Link href={`/login?redirect=${encodeURIComponent(router.asPath)}`}>
-                    <span className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700">
-                      登录
-                    </span>
-                  </Link>
-                </div>
-              ) : (
+              {user ? (
                 <>
                   {errorMessage && (
                     <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
@@ -356,6 +403,18 @@ export default function TopicView({ topic, categories }) {
                     </button>
                   </div>
                 </>
+              ) : (
+                <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    请先登录后再发表回复
+                  </p>
+                  <button
+                    onClick={() => router.push(`/login?redirect=${encodeURIComponent(router.asPath)}`)}
+                    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    登录
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -365,22 +424,25 @@ export default function TopicView({ topic, categories }) {
   );
 }
 
-export async function getServerSideProps({ params }) {
+export async function getServerSideProps({ params, req, res }) {
   try {
     const { id } = params;
     
-    // 获取话题详情
-    const topic = await forumOperations.getTopicById(id);
+    // 正确传入req和res
+    const supabase = createPagesServerClient({ req, res });
     
-    // 如果话题不存在
-    if (!topic) {
-      return {
-        notFound: true,
-      };
-    }
+    // 添加category关联查询
+    const { data: topic, error } = await supabase
+      .from('ForumTopic')
+      .select(`
+        *,
+        profiles:userid (id, email, avatar_url, role, name),
+        category:categoryId (*)
+      `)
+      .eq('id', id)
+      .single();
     
-    // 恢复这行
-    await forumOperations.incrementTopicView(id);
+    if (error) throw error;
     
     // 获取分类列表
     const categories = await forumOperations.getAllCategories();

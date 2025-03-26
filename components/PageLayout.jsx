@@ -1,12 +1,12 @@
 import { motion } from 'framer-motion';
-import { useSession } from 'next-auth/react';
+import { useUser } from '@supabase/auth-helpers-react';
 import CommentSection from './CommentSection';
 import EditPageButton from './EditPageButton';
 import { useRouter } from 'next/router';
 
 export default function PageLayout({ children, frontMatter, meta }) {
   const { title, description } = frontMatter || meta || {};
-  const { data: session } = useSession();
+  const user = useUser();
   const router = useRouter();
   const currentPath = router.asPath;
 
@@ -24,7 +24,7 @@ export default function PageLayout({ children, frontMatter, meta }) {
           </motion.h1>
         )}
         
-        {session && <EditPageButton currentPath={currentPath} />}
+        {user && <EditPageButton currentPath={currentPath} />}
       </div>
       
       {description && (

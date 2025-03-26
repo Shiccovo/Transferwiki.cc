@@ -1,27 +1,45 @@
-import { getServerSession } from "next-auth";
-import { pageEditOperations } from "../../../../lib/db";
-import { authOptions } from "../../auth/[...nextauth]";
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 
 export default async function handler(req, res) {
-  const session = await getServerSession(req, res, authOptions);
+  // 创建Supabase客户端
+  const supabase = createPagesServerClient({ req, res });
 
-  // Check if user is authenticated and is an admin
+  // 获取当前会话
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  // 检查用户是否已登录
   if (!session) {
-    return res.status(401).json({ error: 'You must be signed in to access this resource' });
+    return res.status(401).json({ error: '必须登录才能访问此资源' });
   }
-
-  if (session.user.role !== 'ADMIN') {
-    return res.status(403).json({ error: 'You do not have permission to access this resource' });
+  
+  // 获取用户资料以检查角色
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .single();
+    
+  if (!profile || profile.role !== 'ADMIN') {
+    return res.status(403).json({ error: '您没有权限访问此资源' });
   }
 
   if (req.method === 'GET') {
     try {
-      const pendingEdits = await pageEditOperations.getPendingEdits();
+      // 获取待审核编辑
+      const { data: pendingEdits, error } = await supabase
+        .from('page_edits')
+        .select('*, user:profiles(*)')
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        throw error;
+      }
 
       return res.status(200).json(pendingEdits);
     } catch (error) {
-      console.error('Error fetching pending edits:', error);
-      return res.status(500).json({ error: 'Failed to fetch pending edits' });
+      console.error('获取待审核编辑错误:', error);
+      return res.status(500).json({ error: '获取待审核编辑失败' });
     }
   } else {
     res.setHeader('Allow', ['GET']);

@@ -1,40 +1,59 @@
-import { getServerSession } from "next-auth";
-import { userOperations } from "../../../../../lib/db";
-import { authOptions } from "../../../auth/[...nextauth]";
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 
 export default async function handler(req, res) {
-  const session = await getServerSession(req, res, authOptions);
   const { id } = req.query;
+  
+  // 创建Supabase客户端
+  const supabase = createPagesServerClient({ req, res });
 
-  // Check if user is authenticated and is an admin
+  // 获取当前会话
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  // 检查用户是否已登录
   if (!session) {
-    return res.status(401).json({ error: 'You must be signed in to access this resource' });
+    return res.status(401).json({ error: '必须登录才能访问此资源' });
+  }
+  
+  // 获取用户资料以检查角色
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .single();
+    
+  if (!profile || profile.role !== 'ADMIN') {
+    return res.status(403).json({ error: '您没有权限访问此资源' });
   }
 
-  if (session.user.role !== 'ADMIN') {
-    return res.status(403).json({ error: 'You do not have permission to access this resource' });
-  }
-
-  // Prevent admin from changing their own role to prevent lockout
+  // 防止管理员更改自己的角色
   if (id === session.user.id) {
-    return res.status(403).json({ error: 'You cannot change your own role' });
+    return res.status(400).json({ error: '不能更改自己的角色' });
   }
 
   if (req.method === 'PUT') {
     try {
       const { role } = req.body;
       
-      if (!role || !["USER", "EDITOR", "ADMIN"].includes(role)) {
-        return res.status(400).json({ error: 'Invalid role' });
+      if (!role || !['USER', 'EDITOR', 'ADMIN'].includes(role)) {
+        return res.status(400).json({ error: '无效的角色' });
       }
 
-      // Update user role
-      const user = await userOperations.updateUser(id, { role });
+      // 更新用户角色
+      const { data: updatedUser, error } = await supabase
+        .from('profiles')
+        .update({ role })
+        .eq('id', id)
+        .select()
+        .single();
 
-      return res.status(200).json(user);
+      if (error) {
+        throw error;
+      }
+
+      return res.status(200).json(updatedUser);
     } catch (error) {
-      console.error('Error updating user role:', error);
-      return res.status(500).json({ error: 'Failed to update user role' });
+      console.error('更新用户角色错误:', error);
+      return res.status(500).json({ error: '更新用户角色失败' });
     }
   } else {
     res.setHeader('Allow', ['PUT']);

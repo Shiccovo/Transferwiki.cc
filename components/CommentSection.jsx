@@ -1,12 +1,34 @@
 import { useState, useEffect } from 'react';
-import { useSession, signIn } from 'next-auth/react';
+import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/router';
 
 export default function CommentSection({ pagePath }) {
-  const { data: session } = useSession();
+  const user = useUser();
+  const supabase = useSupabaseClient();
+  const router = useRouter();
+  const [userRole, setUserRole] = useState(null);
   const [comments, setComments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    async function getUserRole() {
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+          
+        if (data) {
+          setUserRole(data.role);
+        }
+      }
+    }
+    
+    getUserRole();
+  }, [user, supabase]);
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm();
 
   useEffect(() => {
@@ -54,7 +76,7 @@ export default function CommentSection({ pagePath }) {
     <div className="mt-8 border-t pt-6">
       <h2 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">评论</h2>
       
-      {session ? (
+      {user ? (
         <form onSubmit={handleSubmit(onSubmit)} className="mb-8">
           <div className="mb-4">
             <textarea
@@ -84,7 +106,7 @@ export default function CommentSection({ pagePath }) {
         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg mb-8 text-center">
           <p className="text-gray-600 dark:text-gray-300 mb-2">请先登录后再发表评论</p>
           <button
-            onClick={() => signIn()}
+            onClick={() => router.push('/login')}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             登录
@@ -107,22 +129,22 @@ export default function CommentSection({ pagePath }) {
             >
               <div className="flex items-start">
                 <div className="flex-shrink-0 mr-3">
-                  {comment.user.image ? (
+                  {comment.user.avatar_url ? (
                     <img 
-                      src={comment.user.image} 
-                      alt={comment.user.name} 
+                      src={comment.user.avatar_url} 
+                      alt={comment.user.name || '未知用户'} 
                       className="w-8 h-8 rounded-full" 
                     />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                      {comment.user.name?.charAt(0).toUpperCase() || 'U'}
+                      {(comment.user.name)?.charAt(0).toUpperCase() || 'U'}
                     </div>
                   )}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {comment.user.name}
+                      {comment.user.name || '未知用户'}
                     </span>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
                       {new Date(comment.createdAt).toLocaleString('zh-CN')}
@@ -132,7 +154,7 @@ export default function CommentSection({ pagePath }) {
                 </div>
                 
                 {/* 删除按钮 (仅对评论作者和管理员显示) */}
-                {session && (session.user.id === comment.userId || session.user.role === 'ADMIN') && (
+                {user && (user.id === comment.userId || userRole === 'ADMIN') && (
                   <button
                     onClick={async () => {
                       if (confirm('确定要删除这条评论吗？')) {

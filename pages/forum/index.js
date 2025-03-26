@@ -7,6 +7,7 @@ import MainLayout from '../../components/layout/MainLayout';
 import ForumLayout from '../../components/layout/ForumLayout';
 import TopicCard from '../../components/forum/TopicCard';
 import { supabase } from '../../lib/supabase';
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 
 export default function ForumHome({ categories, topics }) {
   const router = useRouter();
@@ -26,6 +27,25 @@ export default function ForumHome({ categories, topics }) {
     }
     return 0;
   });
+
+  const fetchTopics = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('ForumTopic')
+        .select(`
+          *,
+          profiles:userid (name, avatar_url)
+        `)
+        .order('createdAt', { ascending: false });
+      
+      if (error) throw error;
+      setTopics(data || []);
+    } catch (error) {
+      console.error('获取话题列表错误:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <MainLayout>
@@ -77,23 +97,33 @@ export default function ForumHome({ categories, topics }) {
   );
 }
 
-export async function getServerSideProps() {
+export async function getServerSideProps({ req, res }) {
   try {
     // 获取所有分类
     const categories = await forumOperations.getAllCategories();
     
-    // 获取所有话题，包括分类信息
+    // 创建supabase客户端，正确传入req和res
+    const supabase = createPagesServerClient({ req, res });
+    
+    // 获取所有话题，使用正确的关系名称和字段
     const { data: topics, error } = await supabase
       .from('ForumTopic')
       .select(`
         *,
         category:categoryId (*),
-        user:userId (*),
+        profiles:userid (id, email, avatar_url, name), 
         replies:ForumReply (*)
       `)
       .order('createdAt', { ascending: false });
 
     if (error) throw error;
+    
+    // 为每个话题确保显示名称使用profiles.name
+    topics.forEach(topic => {
+      if (topic.profiles) {
+        topic.profiles.displayName = topic.profiles.name || 'Unknown User';
+      }
+    });
 
     return {
       props: {

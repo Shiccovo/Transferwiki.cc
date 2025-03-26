@@ -15,7 +15,19 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       // 使用forumOperations获取话题详情
-      const topic = await forumOperations.getTopicById(id);
+      const { data: topic, error } = await supabase
+        .from('ForumTopic')
+        .select(`
+          *,
+          user:userId (*),
+          category:categoryId (*),
+          replies:ForumReply (
+            *,
+            user:userId (*)
+          )
+        `)
+        .eq('id', id)
+        .single();
       
       if (!topic) {
         return res.status(404).json({ error: '话题不存在' });

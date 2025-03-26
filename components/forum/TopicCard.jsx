@@ -2,9 +2,19 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import LikeButton from './LikeButton';
+import { formatDate } from '../../lib/utils';
+import Image from 'next/image';
+import { stringToColor } from '../../lib/utils';
 
 export default function TopicCard({ topic }) {
   const [likes, setLikes] = useState(topic.likes || 0);
+
+  // 计算帖子发布时间
+  const topicDate = formatDate(topic.createdAt);
+  
+  // 使用正确的用户数据结构 - 优先使用name
+  const authorName = topic.profiles ? (topic.profiles.name || topic.profiles.displayName || topic.profiles.email.split('@')[0]) : '未知用户';
+  const userColor = stringToColor(authorName);
 
   const handleLike = async () => {
     try {
@@ -35,16 +45,29 @@ export default function TopicCard({ topic }) {
         <div className="p-4">
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <div className="flex items-center mb-3">
-                <img
-                  src={topic.user?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(topic.user?.name || 'Anonymous')}&background=random`}
-                  alt={topic.user?.name || 'Anonymous'}
-                  className="w-8 h-8 rounded-full mr-3"
-                />
+              <div className="flex items-center mb-4">
+                <div className="mr-4">
+                  {topic.profiles?.avatar_url ? (
+                    <Image 
+                      src={topic.profiles.avatar_url} 
+                      alt={authorName} 
+                      width={48} 
+                      height={48} 
+                      className="rounded-full"
+                    />
+                  ) : (
+                    <div 
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-white text-base"
+                      style={{ backgroundColor: userColor }}
+                    >
+                      {authorName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
                 <div>
                   <div className="flex items-center">
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {topic.user?.name || '匿名用户'}
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {authorName}
                     </span>
                     {topic.isPinned && (
                       <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
@@ -53,29 +76,23 @@ export default function TopicCard({ topic }) {
                     )}
                   </div>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
-                    发表于 {new Date(topic.createdAt).toLocaleDateString('zh-CN', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    发表于 {topicDate}
                   </span>
                 </div>
               </div>
 
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
                 {topic.title}
               </h2>
               
-              <p className="text-gray-600 dark:text-gray-400 line-clamp-2">
+              <p className="text-gray-600 dark:text-gray-400 line-clamp-2 mb-4">
                 {topic.content?.replace(/<[^>]*>/g, '') || ''}
               </p>
             </div>
           </div>
           
           <div className="flex items-center justify-between mt-4 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-3">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-6">
               <LikeButton topic={topic} />
               
               <div className="flex items-center space-x-1">

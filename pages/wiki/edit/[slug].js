@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useUser } from '@supabase/auth-helpers-react';
 import MainLayout from '../../../components/layout/MainLayout';
 import WikiEditor from '../../../components/wiki/WikiEditor';
 import { pageOperations } from '../../../lib/db';
 
 export default function EditWikiPage({ page, error }) {
   const router = useRouter();
-  const { data: session } = useSession();
+  const user = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(error || '');
   
   // 处理权限检查
-  if (!session) {
+  if (!user) {
     return (
       <MainLayout>
         <div className="max-w-4xl mx-auto py-12 px-4">

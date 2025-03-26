@@ -1,30 +1,54 @@
 import { useState, useEffect, useRef } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { motion } from 'framer-motion';
 
 export default function MainLayout({ children }) {
-  const { data: session, status } = useSession();
+  const user = useUser();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState(null);
   const menuRef = useRef(null);
+  const supabase = useSupabaseClient();
 
   // After mounting, we can safely show the UI that depends on the theme
   useEffect(() => {
     setMounted(true);
+    // 一段时间后结束加载状态，给会话加载一些时间
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
   }, []);
   
-  // 简单保存会话到本地存储用于备份
+  // 加载用户资料
   useEffect(() => {
-    if (session && session.user) {
-      localStorage.setItem('userSession', JSON.stringify(session));
+    async function getUserProfile() {
+      if (user) {
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+            
+          if (data) {
+            setUserProfile(data);
+            // 简单保存用户信息到本地存储用于备份
+            localStorage.setItem('userProfile', JSON.stringify(data));
+          }
+        } catch (error) {
+          console.error('Error loading profile:', error);
+        }
+      }
     }
-  }, [session]);
+    
+    getUserProfile();
+  }, [user, supabase]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -43,14 +67,13 @@ export default function MainLayout({ children }) {
   }
 
   const UserMenu = () => {
-    // 从本地存储获取备份会话
-    const storedSessionData = 
-      !session && status === 'loading' ? 
-      JSON.parse(localStorage.getItem('userSession') || 'null') : 
+    // 从本地存储获取备份资料
+    const storedProfileData = 
+      !userProfile && isLoading ? 
+      JSON.parse(localStorage.getItem('userProfile') || 'null') : 
       null;
     
-    if (status === 'loading' && !storedSessionData) {
-      // 如果正在加载且没有备份，显示加载状态
+    if (isLoading && !user && !storedProfileData) {
       return (
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 animate-pulse"></div>
@@ -58,70 +81,50 @@ export default function MainLayout({ children }) {
       );
     }
     
-    if (status === 'unauthenticated' && !storedSessionData) {
+    if (!user && !storedProfileData) {
       // 未登录状态
       return (
         <div className="flex items-center space-x-3">
-          <button
-            onClick={() => router.push('/login')}
-            className="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400"
+          <Link
+            href="/login"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
           >
             登录
-          </button>
-          <span className="text-gray-300 dark:text-gray-700">|</span>
-          <button
-            onClick={() => router.push('/register')}
-            className="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400"
-          >
-            注册
-          </button>
-        </div>
-      );
-    }
-
-    // 使用会话数据或备份数据
-    const user = session?.user || storedSessionData?.user;
-    
-    if (!user) {
-      return (
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => router.push('/login')}
-            className="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400"
-          >
-            登录
-          </button>
-          <span className="text-gray-300 dark:text-gray-700">|</span>
-          <button
-            onClick={() => router.push('/register')}
-            className="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400"
-          >
-            注册
-          </button>
+          </Link>
         </div>
       );
     }
 
     // 已登录状态
+    const handleSignOut = async () => {
+      try {
+        await supabase.auth.signOut();
+        localStorage.removeItem('userProfile');
+        router.push('/');
+      } catch (error) {
+        console.error('Error signing out:', error);
+      }
+    };
+
     return (
       <div className="relative" ref={menuRef}>
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           className="flex items-center space-x-1 focus:outline-none"
         >
-          {user.image ? (
+          {userProfile?.avatar_url ? (
             <img
-              src={user.image}
-              alt={user.name}
+              src={userProfile.avatar_url}
+              alt={userProfile.full_name || '用户头像'}
               className="w-8 h-8 rounded-full"
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
-              {user.name?.charAt(0).toUpperCase() || 'U'}
+              {(userProfile?.full_name || user?.email)?.charAt(0).toUpperCase() || 'U'}
             </div>
           )}
           <span className="text-sm font-medium text-gray-700 dark:text-gray-200 hidden md:inline">
-            {user.name}
+            {userProfile?.full_name || user?.email}
           </span>
         </button>
 
@@ -130,24 +133,16 @@ export default function MainLayout({ children }) {
             <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
               个人资料
             </Link>
-            {user.role === 'ADMIN' && (
+            {userProfile?.role === 'ADMIN' && (
               <Link href="/admin" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
                 管理中心
               </Link>
             )}
             <button
-              onClick={() => {
-                // 清除本地会话数据
-                localStorage.removeItem('userSession');
-                
-                // 退出登录
-                signOut({
-                  callbackUrl: '/',
-                });
-              }}
-              className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+              onClick={handleSignOut}
+              className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              退出登录
+              登出
             </button>
           </div>
         )}

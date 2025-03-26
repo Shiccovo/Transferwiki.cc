@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
 import MainLayout from '../../components/layout/MainLayout';
 import WikiEditor from '../../components/wiki/WikiEditor';
 
 export default function CreateWikiPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const user = useUser();
+  const supabase = useSupabaseClient();
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingUser, setLoadingUser] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [initialData, setInitialData] = useState({});
   
@@ -19,10 +21,11 @@ export default function CreateWikiPage() {
     if (router.query.title) {
       setInitialData(prev => ({ ...prev, title: router.query.title }));
     }
+    setLoadingUser(false);
   }, [router.query]);
   
   // 处理权限检查
-  if (status === 'loading') {
+  if (loadingUser) {
     return (
       <MainLayout>
         <div className="flex justify-center items-center min-h-[60vh]">
@@ -32,7 +35,7 @@ export default function CreateWikiPage() {
     );
   }
   
-  if (!session) {
+  if (!user) {
     return (
       <MainLayout>
         <div className="max-w-4xl mx-auto py-12 px-4">

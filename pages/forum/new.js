@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useForm } from 'react-hook-form';
 import MainLayout from '../../components/layout/MainLayout';
 import ForumLayout from '../../components/layout/ForumLayout';
@@ -28,8 +28,10 @@ const modules = {
 
 export default function CreateForumTopic() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const user = useUser();
+  const supabase = useSupabaseClient();
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingUser, setLoadingUser] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [editorContent, setEditorContent] = useState('');
   const [categories, setCategories] = useState([]);
@@ -47,32 +49,33 @@ export default function CreateForumTopic() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch('/api/forum/categories');
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.length > 0) {
-            setCategories(data);
-          } else {
-            // 如果API没有返回分类或返回空数组，使用预设分类
-            setCategories(PREDEFINED_CATEGORIES);
-          }
+        const { data, error } = await supabase
+          .from('ForumCategory')
+          .select('*')
+          .order('sortOrder', { ascending: true });
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setCategories(data);
         } else {
-          console.error('获取分类失败');
-          // 使用预设分类作为后备方案
+          // 如果数据库没有分类或返回空数组，使用预设分类
           setCategories(PREDEFINED_CATEGORIES);
         }
       } catch (error) {
         console.error('获取分类错误:', error);
         // 使用预设分类作为后备方案
         setCategories(PREDEFINED_CATEGORIES);
+      } finally {
+        setLoadingUser(false);
       }
     };
 
     fetchCategories();
-  }, []);
+  }, [supabase]);
 
   // 处理权限检查
-  if (status === 'loading') {
+  if (loadingUser) {
     return (
       <MainLayout>
         <ForumLayout>
@@ -84,7 +87,7 @@ export default function CreateForumTopic() {
     );
   }
 
-  if (!session) {
+  if (!user) {
     return (
       <MainLayout>
         <ForumLayout>
@@ -114,6 +117,7 @@ export default function CreateForumTopic() {
   // 处理表单提交
   const handleFormSubmit = async (data) => {
     setIsLoading(true);
+    setErrorMessage('');
     
     if (!editorContent || editorContent.trim() === '<p><br></p>') {
       setErrorMessage('内容不能为空');
@@ -122,7 +126,8 @@ export default function CreateForumTopic() {
     }
 
     try {
-      const response = await fetch('/api/forum/topics', {
+      // 使用API路由替代直接插入
+      const response = await fetch('/api/forum/create-topic', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -133,16 +138,16 @@ export default function CreateForumTopic() {
           categoryId: data.categoryId
         }),
       });
-      
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || '创建话题失败');
+        const errorData = await response.json();
+        throw new Error(errorData.error || '创建话题失败');
       }
-      
-      const result = await response.json();
+
+      const newTopic = await response.json();
       
       // 跳转到新创建的话题
-      router.push(`/forum/topic/${result.id}`);
+      router.push(`/forum/topic/${newTopic.id}`);
     } catch (error) {
       console.error('创建话题错误:', error);
       setErrorMessage(error.message || '创建话题失败，请重试');
@@ -160,107 +165,90 @@ export default function CreateForumTopic() {
           </h1>
           
           {errorMessage && (
-            <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
-              <p className="text-red-800 dark:text-red-200">
-                {errorMessage}
-              </p>
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 dark:bg-red-900 dark:text-red-100 dark:border-red-800">
+              <span className="block sm:inline">{errorMessage}</span>
             </div>
           )}
           
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-            <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-              {/* 标题输入 */}
-              <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  标题 *
-                </label>
-                <input
-                  type="text"
-                  id="title"
-                  {...register('title', { 
-                    required: '标题不能为空',
-                    minLength: { value: 5, message: '标题至少需要5个字符' },
-                    maxLength: { value: 100, message: '标题不能超过100个字符' }
-                  })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  placeholder="话题标题"
-                />
-                {errors.title && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                    {errors.title.message}
-                  </p>
-                )}
-              </div>
-              
-              {/* 分类选择 */}
-              <div>
-                <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  分类 *
-                </label>
-                <select
-                  id="categoryId"
-                  {...register('categoryId', { required: '请选择分类' })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                >
-                  <option value="">选择分类</option>
-                  {categories.map(category => (
-                    <option 
-                      key={category.id} 
-                      value={category.id}
-                      style={{
-                        backgroundColor: category.color ? `${category.color}20` : 'transparent',
-                        color: category.color || 'currentColor'
-                      }}
-                    >
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.categoryId && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                    {errors.categoryId.message}
-                  </p>
-                )}
-              </div>
-              
-              {/* 内容编辑器 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  内容 *
-                </label>
+          <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+            <div>
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                标题
+              </label>
+              <input
+                type="text"
+                id="title"
+                {...register('title', { required: '请输入标题' })}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                placeholder="请输入标题"
+              />
+              {errors.title && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                分类
+              </label>
+              <select
+                id="categoryId"
+                {...register('categoryId', { required: '请选择分类' })}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              >
+                <option value="">选择分类</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              {errors.categoryId && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.categoryId.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                内容
+              </label>
+              <div className="prose prose-sm sm:prose dark:prose-invert max-w-none">
                 <ReactQuill
                   value={editorContent}
                   onChange={setEditorContent}
                   modules={modules}
                   theme="snow"
-                  placeholder="请输入内容..."
+                  placeholder="请输入话题内容..."
+                  className="h-64 rounded-md dark:bg-gray-700"
                 />
-                {errorMessage && errorMessage.includes('内容') && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                    内容不能为空
-                  </p>
-                )}
               </div>
-              
-              {/* 提交按钮 */}
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => router.push('/forum')}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
-                >
-                  {isLoading ? '发布中...' : '发布话题'}
-                </button>
-              </div>
-            </form>
-          </div>
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="mr-3 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-600 dark:text-white dark:border-gray-500 dark:hover:bg-gray-700"
+              >
+                取消
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    提交中...
+                  </div>
+                ) : '发布话题'}
+              </button>
+            </div>
+          </form>
         </div>
       </ForumLayout>
     </MainLayout>

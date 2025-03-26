@@ -1,44 +1,73 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useRouter } from 'next/router';
-import PageLayout from '../../components/PageLayout';
+import MainLayout from '../../components/layout/MainLayout';
+import Link from 'next/link';
 
 export default function AdminDashboard() {
-  const { data: session, status } = useSession();
+  const user = useUser();
+  const supabase = useSupabaseClient();
   const router = useRouter();
+  const [profile, setProfile] = useState(null);
   const [pendingEdits, setPendingEdits] = useState([]);
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('edits');
 
   useEffect(() => {
-    // Check if user is admin
-    if (status === 'authenticated') {
-      if (session.user.role !== 'ADMIN') {
-        router.replace('/');
+    async function loadProfile() {
+      if (user) {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+            
+          if (data) {
+            setProfile(data);
+            if (data.role !== 'ADMIN') {
+              router.replace('/');
+            } else {
+              fetchData();
+            }
+          }
+        } catch (error) {
+          console.error('Error loading profile:', error);
+        } finally {
+          setIsLoading(false);
+        }
       } else {
-        fetchData();
+        setIsLoading(false);
+        router.replace('/login');
       }
-    } else if (status === 'unauthenticated') {
-      router.replace('/login');
     }
-  }, [session, status, router]);
+    
+    loadProfile();
+  }, [user, supabase, router]);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Fetch pending edits
-      const editsResponse = await fetch('/api/admin/edits');
-      if (editsResponse.ok) {
-        const editsData = await editsResponse.json();
-        setPendingEdits(editsData);
+      // 获取待审核编辑
+      const { data: edits, error: editsError } = await supabase
+        .from('page_edits')
+        .select('*, user:profiles(*)')
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: false });
+        
+      if (!editsError) {
+        setPendingEdits(edits || []);
       }
 
-      // Fetch users
-      const usersResponse = await fetch('/api/admin/users');
-      if (usersResponse.ok) {
-        const usersData = await usersResponse.json();
-        setUsers(usersData);
+      // 获取所有用户
+      const { data: allUsers, error: usersError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (!usersError) {
+        setUsers(allUsers || []);
       }
     } catch (error) {
       console.error('Error fetching admin data:', error);
@@ -49,192 +78,248 @@ export default function AdminDashboard() {
 
   const handleApproveEdit = async (editId) => {
     try {
-      const response = await fetch(`/api/admin/edits/${editId}/approve`, {
-        method: 'POST',
-      });
-      
-      if (response.ok) {
-        // Refresh data
-        fetchData();
-      }
+      // 先获取编辑信息
+      const { data: edit, error: getError } = await supabase
+        .from('page_edits')
+        .select('*')
+        .eq('id', editId)
+        .single();
+
+      if (getError) throw getError;
+
+      // 更新编辑状态为已批准
+      const { error: updateError } = await supabase
+        .from('page_edits')
+        .update({ status: 'APPROVED' })
+        .eq('id', editId);
+
+      if (updateError) throw updateError;
+
+      // 刷新数据
+      fetchData();
     } catch (error) {
       console.error('Error approving edit:', error);
+      alert('批准编辑失败：' + error.message);
     }
   };
 
   const handleRejectEdit = async (editId) => {
     try {
-      const response = await fetch(`/api/admin/edits/${editId}/reject`, {
-        method: 'POST',
-      });
-      
-      if (response.ok) {
-        // Refresh data
-        fetchData();
-      }
+      // 更新编辑状态为已拒绝
+      const { error } = await supabase
+        .from('page_edits')
+        .update({ status: 'REJECTED' })
+        .eq('id', editId);
+
+      if (error) throw error;
+
+      // 刷新数据
+      fetchData();
     } catch (error) {
       console.error('Error rejecting edit:', error);
+      alert('拒绝编辑失败：' + error.message);
     }
   };
 
   const handleUpdateUserRole = async (userId, role) => {
     try {
-      const response = await fetch(`/api/admin/users/${userId}/role`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ role }),
-      });
-      
-      if (response.ok) {
-        // Refresh data
-        fetchData();
-      }
+      // 更新用户角色
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      // 刷新数据
+      fetchData();
     } catch (error) {
       console.error('Error updating user role:', error);
+      alert('更新用户角色失败：' + error.message);
     }
   };
 
-  if (status === 'loading' || isLoading) {
+  if (isLoading) {
     return (
-      <PageLayout meta={{ title: '管理中心' }}>
-        <div className="flex justify-center items-center min-h-[50vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <MainLayout>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex justify-center items-center min-h-[50vh]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
         </div>
-      </PageLayout>
+      </MainLayout>
     );
   }
 
   return (
-    <PageLayout meta={{ title: '管理中心' }}>
-      <div className="tabs mb-6 border-b">
-        <button 
-          className={`tab ${activeTab === 'edits' ? 'tab-active border-b-2 border-blue-500' : ''} py-2 px-4`}
-          onClick={() => setActiveTab('edits')}
-        >
-          待审核编辑
-        </button>
-        <button 
-          className={`tab ${activeTab === 'users' ? 'tab-active border-b-2 border-blue-500' : ''} py-2 px-4`}
-          onClick={() => setActiveTab('users')}
-        >
-          用户管理
-        </button>
-      </div>
+    <MainLayout>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">管理中心</h1>
+        
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+          <div className="border-b border-gray-200 dark:border-gray-700">
+            <nav className="flex -mb-px">
+              <button 
+                className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                  activeTab === 'edits' 
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+                onClick={() => setActiveTab('edits')}
+              >
+                待审核编辑 ({pendingEdits.length})
+              </button>
+              <button 
+                className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                  activeTab === 'users' 
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+                onClick={() => setActiveTab('users')}
+              >
+                用户管理 ({users.length})
+              </button>
+            </nav>
+          </div>
 
-      {activeTab === 'edits' && (
-        <div>
-          <h2 className="text-xl font-bold mb-4">待审核的页面编辑 ({pendingEdits.length})</h2>
-          
-          {pendingEdits.length === 0 ? (
-            <p className="text-gray-500">目前没有待审核的编辑。</p>
-          ) : (
-            <div className="space-y-6">
-              {pendingEdits.map((edit) => (
-                <div key={edit.id} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="font-bold">页面路径: {edit.pagePath}</h3>
-                      <p className="text-sm text-gray-500">
-                        由 {edit.user.name} 提交于 {new Date(edit.createdAt).toLocaleString('zh-CN')}
-                      </p>
-                    </div>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleApproveEdit(edit.id)}
-                        className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                      >
-                        批准
-                      </button>
-                      <button
-                        onClick={() => handleRejectEdit(edit.id)}
-                        className="px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                      >
-                        拒绝
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <h4 className="font-medium mb-2">编辑内容预览:</h4>
-                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded overflow-auto max-h-96">
-                      <pre className="whitespace-pre-wrap">{edit.content.substring(0, 500)}...</pre>
-                    </div>
-                    <button
-                      onClick={() => window.open(`/api/admin/edits/${edit.id}/preview`, '_blank')}
-                      className="mt-2 px-3 py-1 border border-gray-300 text-sm rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-                    >
-                      查看完整预览
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'users' && (
-        <div>
-          <h2 className="text-xl font-bold mb-4">用户管理 ({users.length})</h2>
-          
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">邮箱</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">角色</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
-                {users.map((user) => (
-                  <tr key={user.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        {user.image && (
-                          <img className="h-8 w-8 rounded-full mr-2" src={user.image} alt="" />
-                        )}
-                        <div>
-                          <div className="text-sm font-medium">{user.name}</div>
+          <div className="p-6">
+            {activeTab === 'edits' && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4">待审核的页面编辑</h2>
+                
+                {pendingEdits.length === 0 ? (
+                  <p className="text-gray-500 dark:text-gray-400">目前没有待审核的编辑。</p>
+                ) : (
+                  <div className="space-y-6">
+                    {pendingEdits.map((edit) => (
+                      <div key={edit.id} className="border dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-medium">
+                              页面路径: <span className="text-blue-600 dark:text-blue-400">{edit.pagePath}</span>
+                            </h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              提交者: {edit.user?.email?.split('@')[0] || '未知用户'} | 
+                              提交时间: {new Date(edit.created_at).toLocaleString('zh-CN')}
+                            </p>
+                          </div>
+                          <div className="flex space-x-2">
+                            <a 
+                              href={`/api/admin/edits/${edit.id}/preview`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded border border-gray-300 dark:border-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-700"
+                            >
+                              预览
+                            </a>
+                            <button 
+                              onClick={() => handleApproveEdit(edit.id)}
+                              className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded border border-green-200 dark:border-green-800 text-sm hover:bg-green-200 dark:hover:bg-green-800"
+                            >
+                              批准
+                            </button>
+                            <button 
+                              onClick={() => handleRejectEdit(edit.id)}
+                              className="px-3 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded border border-red-200 dark:border-red-800 text-sm hover:bg-red-200 dark:hover:bg-red-800"
+                            >
+                              拒绝
+                            </button>
+                          </div>
+                        </div>
+                        <div className="mt-3">
+                          <p className="font-medium text-sm">内容预览:</p>
+                          <pre className="mt-1 text-xs bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700 overflow-auto max-h-32">
+                            {edit.content.slice(0, 500)}{edit.content.length > 500 ? '...' : ''}
+                          </pre>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm">{user.email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.role === 'ADMIN' 
-                          ? 'bg-red-100 text-red-800' 
-                          : user.role === 'EDITOR' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <select
-                        value={user.role}
-                        onChange={(e) => handleUpdateUserRole(user.id, e.target.value)}
-                        className="block w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        disabled={session?.user?.id === user.id} // Cannot change own role
-                      >
-                        <option value="USER">USER</option>
-                        <option value="EDITOR">EDITOR</option>
-                        <option value="ADMIN">ADMIN</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {activeTab === 'users' && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4">用户管理</h2>
+                
+                {users.length === 0 ? (
+                  <p className="text-gray-500 dark:text-gray-400">没有找到用户。</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            用户
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            邮箱
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            注册时间
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            角色
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                        {users.map((user) => (
+                          <tr key={user.id}>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-10 w-10">
+                                  {user.avatar_url ? (
+                                    <img 
+                                      className="h-10 w-10 rounded-full" 
+                                      src={user.avatar_url} 
+                                      alt={user.email?.split('@')[0]} 
+                                    />
+                                  ) : (
+                                    <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                                      {user.email?.charAt(0).toUpperCase() || 'U'}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="ml-4">
+                                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                    {user.email?.split('@')[0]}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900 dark:text-white">{user.email}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                {new Date(user.created_at).toLocaleDateString('zh-CN')}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <select
+                                value={user.role}
+                                onChange={(e) => handleUpdateUserRole(user.id, e.target.value)}
+                                className="block w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                disabled={profile?.id === user.id} // 不能更改自己的角色
+                              >
+                                <option value="USER">用户</option>
+                                <option value="EDITOR">编辑</option>
+                                <option value="ADMIN">管理员</option>
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
-      )}
-    </PageLayout>
+      </div>
+    </MainLayout>
   );
 }

@@ -1,13 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
 
-export default function EditPageButton({ slug }) {
-  const { data: session } = useSession();
+export default function EditPageButton({ currentPath }) {
+  const user = useUser();
+  const supabase = useSupabaseClient();
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [userRole, setUserRole] = useState(null);
+  const slug = currentPath.replace('/wiki/', '');
   
-  if (!session) return null;
+  useEffect(() => {
+    async function getUserRole() {
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+          
+        if (data) {
+          setUserRole(data.role);
+        }
+      }
+    }
+    
+    getUserRole();
+  }, [user, supabase]);
+  
+  if (!user) return null;
   
   return (
     <div className="relative">
@@ -41,7 +62,7 @@ export default function EditPageButton({ slug }) {
             编辑页面
           </button>
           
-          {session.user.role === 'ADMIN' && (
+          {userRole === 'ADMIN' && (
             <>
               <button
                 onClick={() => router.push(`/wiki/history/${slug}`)}

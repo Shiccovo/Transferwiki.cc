@@ -1,9 +1,12 @@
-import { getServerSession } from "next-auth";
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 import { commentOperations } from "../../../lib/db";
-import { authOptions } from "../auth/[...nextauth]";
 
 export default async function handler(req, res) {
-  const session = await getServerSession(req, res, authOptions);
+  // 创建 Supabase 客户端
+  const supabase = createPagesServerClient({ req, res });
+  
+  // 获取当前会话
+  const { data: { session } } = await supabase.auth.getSession();
 
   if (req.method === 'GET') {
     try {

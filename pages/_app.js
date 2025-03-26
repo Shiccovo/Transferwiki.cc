@@ -1,7 +1,7 @@
 import { ThemeProvider } from 'next-themes';
-import { SessionProvider } from 'next-auth/react';
+import { SessionContextProvider } from '@supabase/auth-helpers-react';
 import { useEffect, useState, createContext, useContext } from 'react';
-import { supabase } from '../lib/supabase';
+import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs';
 import '../styles/globals.css';
 import '../styles/quill.css';
 import { useRouter } from 'next/router';
@@ -15,6 +15,7 @@ export function useAuth() {
 export default function App({ Component, pageProps }) {
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const [supabaseClient] = useState(() => createPagesBrowserClient());
 
   useEffect(() => {
     setMounted(true);
@@ -88,17 +89,29 @@ export default function App({ Component, pageProps }) {
     };
   }, [router]);
 
+  useEffect(() => {
+    // 监听认证状态变化
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          localStorage.removeItem('userProfile');
+        }
+      }
+    );
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, [supabaseClient]);
+
   return (
-    <SessionProvider 
-      session={pageProps.session}
-      refetchInterval={5 * 60} // 每5分钟重新获取会话以确保会话始终是最新的
-      refetchOnWindowFocus={true} // 窗口获得焦点时重新获取会话
-      refetchWhenOffline={false} // 离线时不重新获取
-      staleTime={0} // 立即使用新会话数据
+    <SessionContextProvider
+      supabaseClient={supabaseClient}
+      initialSession={pageProps.initialSession}
     >
       <ThemeProvider attribute="class" defaultTheme="system">
         {getLayout(<Component {...pageProps} />)}
       </ThemeProvider>
-    </SessionProvider>
+    </SessionContextProvider>
   );
 }
