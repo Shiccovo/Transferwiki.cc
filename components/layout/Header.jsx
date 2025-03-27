@@ -40,6 +40,9 @@ export default function Header({ user, userProfile, isLoadingProfile }) {
               <Link href="/forum" className={`text-sm font-medium ${router.pathname.startsWith('/forum') ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'}`}>
                 论坛
               </Link>
+              <Link href="/datapoints" className={`text-sm font-medium ${router.pathname.startsWith('/datapoints') ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'}`}>  
+                学生案例
+              </Link>  
               <Link href="/about" className={`text-sm font-medium ${router.pathname === '/about' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'}`}>
                 关于
               </Link>
@@ -207,6 +210,9 @@ export default function Header({ user, userProfile, isLoadingProfile }) {
               <Link href="/forum" className={`text-sm font-medium ${router.pathname.startsWith('/forum') ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'}`}>
                 论坛
               </Link>
+              <Link href="/datapoints" className={`text-sm font-medium ${router.pathname.startsWith('/datapoints') ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'}`}>  
+                学生案例
+              </Link>  
               <Link href="/about" className={`text-sm font-medium ${router.pathname === '/about' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'}`}>
                 关于
               </Link>
