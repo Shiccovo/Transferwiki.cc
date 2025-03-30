@@ -109,10 +109,7 @@ export default function ReplyCard({ reply, onEdit, onDelete, isFirst = false }) 
                       作者
                     </span>
                   )}
-                  {/* 添加badge */}
-                  <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                    新回复
-                  </span>
+
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {formatDate(reply.createdAt)}
