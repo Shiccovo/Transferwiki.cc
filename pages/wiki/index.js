@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import MainLayout from '../../components/layout/MainLayout';
 import { pageOperations } from '../../lib/db';
 
 // Wiki首页组件

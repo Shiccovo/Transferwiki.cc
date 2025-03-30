@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
-import MainLayout from '../../components/layout/MainLayout';
-import WikiLayout from '../../components/layout/WikiLayout';
-import MarkdownContent from '../../components/ui/MarkdownContent';
 import { pageOperations } from '../../lib/db';
 
 export default function WikiPage({ page, error }) {
