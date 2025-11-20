@@ -1,0 +1,193 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-color: #3b82f6;
+  --primary-color-light: #93c5fd;
+  --bg-color: #ffffff;
+  --text-color: #333333;
+}
+
+@layer base {
+  * {
+    @apply box-border p-0 m-0;
+  }
+
+  html,
+  body {
+    @apply font-sans bg-white text-gray-800;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold mb-4 leading-tight tracking-tight;
+  }
+
+  h1 {
+    @apply text-4xl md:text-5xl;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl;
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl;
+  }
+
+  p {
+    @apply mb-4 leading-relaxed;
+  }
+
+  a {
+    @apply text-primary transition-colors duration-200 hover:text-primary-light;
+  }
+
+  ul, ol {
+    @apply pl-6 mb-6;
+  }
+
+  li {
+    @apply mb-2;
+  }
+
+  strong, b {
+    @apply font-bold;
+  }
+
+  em, i {
+    @apply italic;
+  }
+
+  blockquote {
+    @apply border-l-4 border-primary-light pl-4 my-4 italic text-gray-600;
+  }
+
+  hr {
+    @apply border-0 h-px bg-gray-200 my-8;
+  }
+
+  code {
+    @apply rounded;
+  }
+
+  table {
+    @apply w-full my-6 border-separate border-spacing-0 rounded-lg overflow-hidden shadow-sm;
+  }
+
+  th, td {
+    @apply p-3 border border-gray-200;
+  }
+
+  th {
+    @apply bg-gray-50 font-semibold;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-card shadow-card transition-all duration-300 ease-custom hover:shadow-card-hover hover:-translate-y-1;
+  }
+
+  .btn {
+    @apply px-4 py-2 rounded-md font-medium transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-light;
+  }
+
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* 页面转场动画 */
+.page-transition-enter {
+  @apply opacity-0 translate-y-5;
+}
+
+.page-transition-enter-active {
+  @apply opacity-100 translate-y-0 transition-all duration-300;
+}
+
+.page-transition-exit {
+  @apply opacity-100 translate-y-0;
+}
+
+.page-transition-exit-active {
+  @apply opacity-0 -translate-y-5 transition-all duration-300;
+}
+
+/* Prose样式增强 */
+.prose {
+  @apply max-w-none;
+}
+
+.prose h1 {
+  @apply text-3xl font-bold mt-8 mb-4 text-gray-900 dark:text-white;
+}
+
+.prose h2 {
+  @apply text-2xl font-bold mt-6 mb-3 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2;
+}
+
+.prose h3 {
+  @apply text-xl font-bold mt-5 mb-2 text-gray-900 dark:text-white;
+}
+
+.prose p {
+  @apply mb-4 text-gray-700 dark:text-gray-300 leading-7;
+}
+
+.prose a {
+  @apply text-blue-600 dark:text-blue-400 hover:underline;
+}
+
+.prose ul, .prose ol {
+  @apply my-4 pl-6;
+}
+
+.prose li {
+  @apply mb-2 text-gray-700 dark:text-gray-300;
+}
+
+.prose code {
+  @apply bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-gray-900 dark:text-gray-100;
+}
+
+.prose pre {
+  @apply bg-gray-900 dark:bg-gray-950 p-4 rounded-lg overflow-x-auto my-4;
+}
+
+.prose pre code {
+  @apply bg-transparent p-0 text-gray-100;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-blue-500 pl-4 italic my-4 text-gray-600 dark:text-gray-400;
+}
+
+.prose table {
+  @apply w-full my-4 border-collapse;
+}
+
+.prose th {
+  @apply bg-gray-100 dark:bg-gray-800 font-semibold p-3 text-left border border-gray-300 dark:border-gray-600;
+}
+
+.prose td {
+  @apply p-3 border border-gray-300 dark:border-gray-600;
+}
+
+.prose hr {
+  @apply my-8 border-gray-300 dark:border-gray-700;
+}
+
+.prose img {
+  @apply rounded-lg my-4 max-w-full h-auto;
+}
+
+.prose strong {
+  @apply font-bold text-gray-900 dark:text-white;
+}

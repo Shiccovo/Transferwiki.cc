@@ -1,0 +1,12 @@
+index.md - 首页
+intro.md - 前言
+guide.md - 内容导航
+think.md - 转学的利与弊
+school.md - 定位择校
+material.md - 材料准备
+apply.md - 申请流程
+admit.md - 录取后
+faq.md - 常见问题
+future -未来规划
+school_list -学校列表
+bgs - 附录：学生案例

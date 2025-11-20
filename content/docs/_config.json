@@ -1,0 +1,17 @@
+{
+  "docs": [
+    { "slug": "index", "title": "首页", "order": 1 },
+    { "slug": "intro", "title": "前言", "order": 2 },
+    { "slug": "guide", "title": "内容导航", "order": 3 },
+    { "slug": "think", "title": "转学的利与弊", "order": 4 },
+    { "slug": "school", "title": "选择学校", "order": 5 },
+    { "slug": "material", "title": "材料准备", "order": 6 },
+    { "slug": "apply", "title": "申请流程", "order": 7 },
+    { "slug": "admit", "title": "录取后", "order": 8 },
+    { "slug": "future", "title": "未来规划", "order": 9 },
+    { "slug": "faq", "title": "常见问题", "order": 10 },
+    { "slug": "school_list", "title": "学校列表", "order": 11 },
+    { "slug": "bgs", "title": "附录：学生案例", "order": 12 }
+  ]
+}
+
