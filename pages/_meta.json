@@ -1,0 +1,36 @@
+{
+  "index": {
+    "title": "首页",
+    "display": "hidden",
+    "theme": {
+      "layout": "full"
+    }
+  },
+  "intro": "介绍",
+  "school": "学校信息",
+  "apply": "申请指南",
+  "admit": "录取信息",
+  "material": "申请材料",
+  "bgs": "课程信息",
+  "future": "未来发展",
+  "faq": "常见问题",
+  "think": "心路历程",
+  "login": {
+    "title": "登录",
+    "display": "hidden",
+    "theme": {
+      "layout": "raw",
+      "sidebar": false,
+      "toc": false
+    }
+  },
+  "register": {
+    "title": "注册",
+    "display": "hidden",
+    "theme": {
+      "layout": "raw",
+      "sidebar": false,
+      "toc": false
+    }
+  }
+}
