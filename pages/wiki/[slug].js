@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { pageOperations } from '../../lib/db';
+import MainLayout from '../../components/layout/MainLayout';
+import WikiLayout from '../../components/layout/WikiLayout';
+import MarkdownContent from '../../components/ui/MarkdownContent';
 
 export default function WikiPage({ page, error }) {
   const router = useRouter();
