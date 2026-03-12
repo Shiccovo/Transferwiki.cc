@@ -6,7 +6,7 @@ import { forumOperations } from '../../lib/db';
 import MainLayout from '../../components/layout/MainLayout';
 import ForumLayout from '../../components/layout/ForumLayout';
 import TopicCard from '../../components/forum/TopicCard';
-import { supabase } from '../../lib/supabase';
+import SiteMeta from '../../components/SiteMeta';
 import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 
 export default function ForumHome({ categories, topics }) {
@@ -28,26 +28,13 @@ export default function ForumHome({ categories, topics }) {
     return 0;
   });
 
-  const fetchTopics = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('ForumTopic')
-        .select(`
-          *,
-          profiles:userid (name, avatar_url)
-        `)
-        .order('createdAt', { ascending: false });
-      
-      if (error) throw error;
-      setTopics(data || []);
-    } catch (error) {
-      console.error('获取话题列表错误:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
+    <>
+      <SiteMeta
+        title="论坛"
+        canonical="/forum"
+        description="在 Transferwiki 论坛与转学生们交流选校、申请、文书等经验，获取最新的转学资讯。"
+      />
     <MainLayout>
       <ForumLayout categories={categories}>
         <div className="space-y-4">
@@ -94,6 +81,7 @@ export default function ForumHome({ categories, topics }) {
         </div>
       </ForumLayout>
     </MainLayout>
+    </>
   );
 }
 
@@ -111,19 +99,14 @@ export async function getServerSideProps({ req, res }) {
       .select(`
         *,
         category:categoryId (*),
-        profiles:userid (id, email, avatar_url, name), 
+        profiles:userid (id, email, avatar_url, full_name),
         replies:ForumReply (*)
       `)
       .order('createdAt', { ascending: false });
 
     if (error) throw error;
     
-    // 为每个话题确保显示名称使用profiles.name
-    topics.forEach(topic => {
-      if (topic.profiles) {
-        topic.profiles.displayName = topic.profiles.name || 'Unknown User';
-      }
-    });
+    // 无需额外处理，full_name 字段已正确查询
 
     return {
       props: {

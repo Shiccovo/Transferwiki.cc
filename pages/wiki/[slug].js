@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import DocsLayout from '../../components/layout/DocsLayout';
 import { getAllDocSlugs, getDocBySlug, getDocsNavigation } from '../../lib/staticDocs';
+import SiteMeta from '../../components/SiteMeta';
 
 export default function DocPage({ doc, navigation, error }) {
   const router = useRouter();
@@ -44,6 +45,12 @@ export default function DocPage({ doc, navigation, error }) {
   }
 
   return (
+    <>
+      <SiteMeta
+        title={doc.title}
+        canonical={`/wiki/${doc.slug}`}
+        description={doc.description || `Transferwiki 知识库 — ${doc.title}：美本转学完整指南。`}
+      />
     <DocsLayout>
       <div className="max-w-7xl mx-auto py-8 px-4">
         {/* 面包屑导航 */}
@@ -180,6 +187,7 @@ export default function DocPage({ doc, navigation, error }) {
         </div>
       </div>
     </DocsLayout>
+    </>
   );
 }
 

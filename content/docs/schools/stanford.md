@@ -1,10 +1,16 @@
 # Stanford University
 
+## 学校简介
+
 斯坦福大学（Stanford University）是坐落于美国加利福尼亚州的私立研究型大学，由利兰斯坦福与简斯坦福于1891年建立，以纪念他们的小儿子小利兰斯坦福。学校占地8180英亩，有近700栋建筑物，容纳了近97%的本科生住在校园中。
 
-斯坦福大学带动了美国加州硅谷地区独有的经济模式，为硅谷及世界各地源源不断地输送了大量高等人才。斯坦福知名校友们成立了多家大型企业，资金合计约等于全球第十大经济体。斯坦福也是培养美国国会成员最多的院校之一。目前，斯坦福有数千名来自世界各地的国际学生，是名副其实的多元化高等学府。美国前任总统巴拉克•奥巴马(Barack Obama)称赞斯坦福大学是一个集合发现、学习、建设、质疑、重新想象、创造彼此联系和合作的新方式的地方。该校截止目前共有19名诺贝尔奖得主。推动经济发展，培育顶尖人才，不仅如此，斯坦福大学还十分重视环保，多次上榜最环保的美国大学榜单。
+斯坦福大学带动了美国加州硅谷地区独有的经济模式，为硅谷及世界各地源源不断地输送了大量高等人才。斯坦福知名校友们成立了多家大型企业，资金合计约等于全球第十大经济体。斯坦福也是培养美国国会成员最多的院校之一。目前，斯坦福有数千名来自世界各地的国际学生，是名副其实的多元化高等学府。该校截止目前共有19名诺贝尔奖得主。推动经济发展，培育顶尖人才，不仅如此，斯坦福大学还十分重视环保，多次上榜最环保的美国大学榜单。
 
-斯坦福大学目前共有七个学院，本科专业设置以文理学科为主，研究生专业则包括医学、法律、教育学及商学学科。斯坦福为硅谷地区培养了大量高新技术人才，在福布斯网站公布的根据校友排名的榜单中，斯坦福大学光荣上榜。在世界大学的42个学科排名中，斯坦福大学共有33个专业进入世界前10，仅次于加州大学伯克利分校（35个）位居世界第二。
+斯坦福大学目前共有七个学院，本科专业设置以文理学科为主，研究生专业则包括医学、法律、教育学及商学学科。斯坦福为硅谷地区培养了大量高新技术人才。在世界大学的42个学科排名中，斯坦福大学共有33个专业进入世界前10，仅次于加州大学伯克利分校（35个）位居世界第二。
+
+## 同学评价
+
+斯坦福大学转学录取率极低，约为1.7%，是全美录取率最低的转学项目之一。转学申请者应将斯坦福定位为冲刺/梦校，做好充分准备。每年全球仅录取约50-60名转学生，竞争极为激烈。
 
 ## 学校排名
 
@@ -16,7 +22,7 @@
 
 [Transfer Application Requirements](https://admission.stanford.edu/apply/transfer/index.html)
 
-1. Coalition Application or Common Application 
+1. Coalition Application or Common Application
 2. $90 nonrefundable application fee or fee waiver request
 3. ACT or SAT test scores (refer to testing for score reporting policies). Official high school transcript (should include your graduation date). Visit our Transcripts and College Report page for information about equivalent documents you may submit.
 4. Official transcript(s) from every college/university attended
@@ -61,7 +67,7 @@ June 1 - Student Reply Date
 | Racial/ethnic status | Considered |
 | Volunteer work | Considered |
 | Work experience | Considered |
-| Level of applicant’s interest | Not Considered |
+| Level of applicant's interest | Not Considered |
 
 ## 转学录取
 

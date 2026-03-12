@@ -1,10 +1,8 @@
-import { getServerSession } from "next-auth";
-import { forumOperations } from "../../../../lib/db";
-import { authOptions } from "../../auth/[...nextauth]";
-import { supabase } from "../../../../lib/supabase";
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 
 export default async function handler(req, res) {
-  const session = await getServerSession(req, res, authOptions);
+  const supabase = createPagesServerClient({ req, res });
+  const { data: { session } } = await supabase.auth.getSession();
   const { id } = req.query;
 
   if (!id) {
@@ -39,12 +37,20 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: '回复不存在' });
       }
       
+      // 查询用户角色
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+      const isAdmin = userProfile?.role === 'ADMIN';
+
       // 检查权限
-      if (reply.topic.isLocked && session.user.role !== 'ADMIN') {
+      if (reply.topic.isLocked && !isAdmin) {
         return res.status(403).json({ error: '话题已锁定，无法编辑回复' });
       }
-      
-      if (reply.userId !== session.user.id && session.user.role !== 'ADMIN') {
+
+      if (reply.userId !== session.user.id && !isAdmin) {
         return res.status(403).json({ error: '无权编辑该回复' });
       }
       
@@ -121,12 +127,20 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: '回复不存在' });
       }
       
+      // 查询用户角色
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+      const isAdmin = userProfile?.role === 'ADMIN';
+
       // 检查权限
-      if (reply.topic.isLocked && session.user.role !== 'ADMIN') {
+      if (reply.topic.isLocked && !isAdmin) {
         return res.status(403).json({ error: '话题已锁定，无法删除回复' });
       }
-      
-      if (reply.userId !== session.user.id && session.user.role !== 'ADMIN') {
+
+      if (reply.userId !== session.user.id && !isAdmin) {
         return res.status(403).json({ error: '无权删除该回复' });
       }
       

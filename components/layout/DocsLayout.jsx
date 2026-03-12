@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import SearchBar from '../SearchBar';
 
 export default function DocsLayout({ children }) {
   const { theme, setTheme } = useTheme();
@@ -47,8 +48,9 @@ export default function DocsLayout({ children }) {
               </nav>
             </div>
 
-            {/* Right side: Theme toggle */}
+            {/* Right side: Search + Theme toggle */}
             <div className="flex items-center space-x-4">
+              <SearchBar />
               {/* Theme toggle */}
               <button
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"

@@ -48,14 +48,13 @@ export default function App({ Component, pageProps }) {
 
     // Subscribe to router events
     if (mounted) {
-      const { Router } = require('next/router');
-      Router.events.on('routeChangeComplete', handleRouteChange);
-      
+      router.events.on('routeChangeComplete', handleRouteChange);
+
       return () => {
-        Router.events.off('routeChangeComplete', handleRouteChange);
+        router.events.off('routeChangeComplete', handleRouteChange);
       };
     }
-  }, [mounted]);
+  }, [mounted, router]);
 
   useEffect(() => {
     const handleStart = () => {
