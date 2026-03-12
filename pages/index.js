@@ -3,7 +3,6 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import MainLayout from '../components/layout/MainLayout';
-import { pageOperations, forumOperations } from '../lib/db';
 
 export default function Home({ recentPages, popularTopics }) {
   const router = useRouter();
@@ -186,29 +185,10 @@ export default function Home({ recentPages, popularTopics }) {
 }
 
 export async function getStaticProps() {
-  try {
-    // Get recent Wiki pages
-    const recentPages = await pageOperations.getAllPages(5);
-
-    // Get popular forum topics
-    const popularTopics = await forumOperations.getPopularTopics(5);
-
-    return {
-      props: {
-        recentPages: JSON.parse(JSON.stringify(recentPages)),
-        popularTopics: JSON.parse(JSON.stringify(popularTopics))
-      },
-      revalidate: 60 // Revalidate every 60 seconds
-    };
-  } catch (error) {
-    console.error('Error fetching data:', error);
-    
-    return {
-      props: {
-        recentPages: [],
-        popularTopics: []
-      },
-      revalidate: 60
-    };
-  }
+  return {
+    props: {
+      recentPages: [],
+      popularTopics: []
+    }
+  };
 }
