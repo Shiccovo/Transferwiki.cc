@@ -1,4 +1,5 @@
 import MainLayout from '../components/layout/MainLayout';
+import SiteMeta from '../components/SiteMeta';
 import { motion } from 'framer-motion';
 // import { FaBookOpen, FaUsers, FaGraduationCap, FaGlobe } from 'react-icons/fa';
 
@@ -24,6 +25,12 @@ export default function About() {
   ];
 
   return (
+    <>
+      <SiteMeta
+        title="关于我们"
+        canonical="/about"
+        description="Transferwiki.cc 是由转学生发起的公益社区，致力于传播美本转学相关的免费知识，消除信息壁垒。"
+      />
     <MainLayout>
       {/* 使命声明 */}
       <section className="container mx-auto px-4 py-16 text-center">
@@ -43,7 +50,10 @@ export default function About() {
           加入我们的Discord社区(备用): <a href="https://discord.gg/6nYPs2xnjP" className="text-blue-600 hover:underline">https://discord.gg/6nYPs2xnjP</a>
         </p>
         <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-          有任何建议可以联系开发者: admin@cloudo.dev  
+          本项目开源于 GitHub: <a href="https://github.com/Shiccovo/Transferwiki.cc" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">github.com/Shiccovo/Transferwiki.cc</a>
+        </p>
+        <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+          有任何建议可以联系开发者: admin@cloudo.dev
         </p>
         
       </section>
@@ -124,5 +134,6 @@ export default function About() {
         </div>
       </section>
     </MainLayout>
+    </>
   );
 }

@@ -1,13 +1,15 @@
-import { useEffect } from 'react';
-import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import MainLayout from '../components/layout/MainLayout';
+import SiteMeta from '../components/SiteMeta';
 
 export default function Home({ recentPages, popularTopics }) {
-  const router = useRouter();
-
   return (
+    <>
+      <SiteMeta
+        canonical="/"
+        description="Transferwiki.cc — 由转学生共建的美本转学知识库，提供院校指南、申请经验、学生案例与社区讨论。"
+      />
     <MainLayout>
       {/* Hero Section */}
       <section className="py-20 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl text-white mb-12">
@@ -181,14 +183,60 @@ export default function Home({ recentPages, popularTopics }) {
         </div>
       </div>
     </MainLayout>
+    </>
   );
 }
 
 export async function getStaticProps() {
+  const fs = require('fs');
+  const path = require('path');
+  const matter = require('gray-matter');
+
+  // 读取 content/docs 中所有 wiki 文章作为"最新页面"
+  const docsDir = path.join(process.cwd(), 'content/docs');
+  const listPath = path.join(docsDir, 'list.txt');
+
+  let recentPages = [];
+  try {
+    const listContent = fs.readFileSync(listPath, 'utf8');
+    const lines = listContent.split('\n').filter(l => l.trim());
+
+    recentPages = lines.map((line, index) => {
+      const match = line.trim().match(/^(.+?)\.md\s*-\s*(.+)$/);
+      if (!match) return null;
+      const slug = match[1].trim();
+      const title = match[2].trim();
+
+      try {
+        const filePath = path.join(docsDir, `${slug}.md`);
+        const raw = fs.readFileSync(filePath, 'utf8');
+        const { data, content } = matter(raw);
+        // 取正文前 120 字符作为摘要（去掉 markdown 标记）
+        const plainText = content.replace(/[#*`\[\]]/g, '').trim();
+        const description = data.description || plainText.substring(0, 120) + '...';
+
+        return {
+          id: slug,
+          slug,
+          title,
+          description,
+          content: plainText.substring(0, 150),
+          updatedAt: new Date().toISOString(),
+          version: 1,
+          lastEditedBy: { name: 'Transferwiki 编辑组' },
+        };
+      } catch {
+        return null;
+      }
+    }).filter(Boolean).slice(0, 5);
+  } catch (e) {
+    console.error('读取 wiki 文章列表失败:', e);
+  }
+
   return {
     props: {
-      recentPages: [],
-      popularTopics: []
-    }
+      recentPages,
+      popularTopics: [],
+    },
   };
 }
