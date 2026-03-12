@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { pageOperations } from '../../lib/db';
+import MainLayout from '../../components/layout/MainLayout';
 
 // Wiki首页组件
 export default function WikiHomePage({ initialCategories, initialPages, error }) {
@@ -60,24 +61,44 @@ export default function WikiHomePage({ initialCategories, initialPages, error })
     setSearchTerm(formData.get('search'));
   };
   
-  // 处理错误状态
+  // 处理错误状态 - 显示文档中心入口
   if (error) {
     return (
       <MainLayout>
         <div className="max-w-4xl mx-auto py-12 px-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-              出错了
+              Wiki 知识库
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mb-8">
-              {error}
+              欢迎访问 Transferwiki 知识库
             </p>
-            <button
-              onClick={() => router.reload()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
-              重试
-            </button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/wiki/docs">
+                <span className="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-lg font-semibold">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6 mr-2"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  浏览文档中心
+                </span>
+              </Link>
+              <Link href="/forum">
+                <span className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-lg font-semibold">
+                  访问论坛
+                </span>
+              </Link>
+            </div>
           </div>
         </div>
       </MainLayout>
@@ -96,7 +117,7 @@ export default function WikiHomePage({ initialCategories, initialPages, error })
             Wiki 知识库
           </h1>
           
-          <div className="w-full md:w-auto flex space-x-2">
+          <div className="w-full md:w-auto flex flex-wrap gap-2">
             <form onSubmit={handleSearch} className="flex-grow">
               <div className="relative">
                 <input
@@ -121,6 +142,26 @@ export default function WikiHomePage({ initialCategories, initialPages, error })
                 </svg>
               </div>
             </form>
+            
+            <Link href="/wiki/docs">
+              <span className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 mr-1"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                文档中心
+              </span>
+            </Link>
             
             <Link href="/wiki/create">
               <span className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
