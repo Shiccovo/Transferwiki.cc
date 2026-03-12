@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import DocsLayout from '../../components/layout/DocsLayout';
 import { getAllDocs } from '../../lib/staticDocs';
 
-export default function WikiIndexPage({ docs }) {
+export default function WikiIndexPage({ docs = [] }) {
   return (
     <DocsLayout>
       <div className="max-w-7xl mx-auto py-8 px-4">

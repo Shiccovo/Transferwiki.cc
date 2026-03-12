@@ -33,18 +33,6 @@ export default function App({ Component, pageProps }) {
         return;
       }
 
-      // Increment view count for wiki pages
-      if (url.startsWith('/wiki/') && url !== '/wiki/' && url !== '/wiki/create' && !url.includes('/edit/') && !url.includes('/history/')) {
-        const slug = url.replace('/wiki/', '');
-        
-        // Call API to increment view count
-        fetch(`/api/pages/view?slug=${encodeURIComponent(slug)}`, {
-          method: 'POST',
-        }).catch(err => {
-          console.error('Failed to increment page view:', err);
-        });
-      }
-      
       // Increment view count for forum topics
       if (url.startsWith('/forum/topic/')) {
         const topicId = url.replace('/forum/topic/', '');
