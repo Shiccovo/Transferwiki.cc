@@ -195,9 +195,12 @@ export async function getStaticPaths() {
   try {
     const slugs = getAllDocSlugs();
 
-    const paths = slugs.map((slug) => ({
-      params: { slug },
-    }));
+    // 过滤掉 'bgs',因为它有专门的静态页面 pages/wiki/bgs.js
+    const paths = slugs
+      .filter(slug => slug !== 'bgs')
+      .map((slug) => ({
+        params: { slug },
+      }));
 
     return {
       paths,
