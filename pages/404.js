@@ -43,7 +43,7 @@ export default function Custom404() {
                 返回首页
               </span>
             </Link>
-            <Link href="/wiki">
+            <Link href="/wiki/index">
               <span className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-medium rounded-lg shadow-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 inline-block">
                 浏览 Wiki
               </span>

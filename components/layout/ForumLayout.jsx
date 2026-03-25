@@ -56,7 +56,7 @@ export default function ForumLayout({ children, categories = [] }) {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">快速链接</h3>
             <nav className="space-y-1">
               <Link 
-                href="/wiki"
+                href="/wiki/index"
                 className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 Wiki新人导航

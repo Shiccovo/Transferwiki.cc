@@ -36,7 +36,7 @@ export default function Home({ recentPages, popularTopics }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Link href="/wiki">
+            <Link href="/wiki/index">
               <span className="px-6 py-3 bg-white text-blue-600 font-medium rounded-lg shadow-md hover:bg-gray-100 transition-colors duration-200">
                 新人导航
               </span>
@@ -59,7 +59,7 @@ export default function Home({ recentPages, popularTopics }) {
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">最新Wiki页面</h2>
               <Link href="/wiki">
                 <span className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-                  查看全部
+                  查看全部文章
                 </span>
               </Link>
             </div>

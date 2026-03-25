@@ -33,7 +33,7 @@ export default function DocsLayout({ children }) {
                 <Link href="/" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">
                   首页
                 </Link>
-                <Link href="/wiki" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">
+                <Link href="/wiki/index" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">
                   Wiki
                 </Link>
                 <Link href="/forum" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">
