@@ -13,7 +13,7 @@ export default function TopicCard({ topic }) {
   const topicDate = formatDate(topic.createdAt);
   
   // 使用正确的用户数据结构 - 优先使用name
-  const authorName = topic.profiles ? (topic.profiles.name || topic.profiles.displayName || topic.profiles.email.split('@')[0]) : '未知用户';
+  const authorName = topic.profiles ? (topic.profiles.full_name || topic.profiles.email?.split('@')[0] || '未知用户') : '未知用户';
   const userColor = stringToColor(authorName);
 
   const handleLike = async () => {

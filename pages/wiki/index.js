@@ -2,9 +2,16 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import DocsLayout from '../../components/layout/DocsLayout';
 import { getAllDocs } from '../../lib/staticDocs';
+import SiteMeta from '../../components/SiteMeta';
 
 export default function WikiIndexPage({ docs = [] }) {
   return (
+    <>
+      <SiteMeta
+        title="Wiki 知识库"
+        canonical="/wiki"
+        description="Transferwiki 知识库：从了解转学到入学后的完整指南，涵盖转学利弊、定位择校、材料准备、申请流程等。"
+      />
     <DocsLayout>
       <div className="max-w-7xl mx-auto py-8 px-4">
         {/* 页面标题 */}
@@ -125,6 +132,7 @@ export default function WikiIndexPage({ docs = [] }) {
         </div>
       </div>
     </DocsLayout>
+    </>
   );
 }
 

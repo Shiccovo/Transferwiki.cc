@@ -10,6 +10,7 @@ import dynamic from 'next/dynamic';
 import { forumOperations } from '../../../lib/db';
 import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 import MarkdownContent from '../../../components/ui/MarkdownContent';
+import SiteMeta from '../../../components/SiteMeta';
 
 // 动态导入富文本编辑器组件以避免SSR问题
 const RichTextEditor = dynamic(() => import('../../../components/ui/RichTextEditor'), {
@@ -124,7 +125,7 @@ export default function TopicView({ topic: initialTopic, categories }) {
         .from('ForumTopic')
         .select(`
           *,
-          profiles:userid (id, email, avatar_url, role, name)
+          profiles:userid (id, email, avatar_url, role, full_name)
         `)
         .eq('id', topic.id)
         .single();
@@ -192,10 +193,20 @@ export default function TopicView({ topic: initialTopic, categories }) {
     if (!profile) return '匿名用户';
     
     // 优先使用name，最后才考虑邮箱前缀
-    return profile.name || profile.email?.split('@')[0] || '匿名用户';
+    return profile.full_name || profile.email?.split('@')[0] || '匿名用户';
   }
 
+  const topicDescription = topic.content
+    ? topic.content.replace(/<[^>]*>/g, '').substring(0, 120).trim() + '...'
+    : '在 Transferwiki 论坛查看完整讨论。';
+
   return (
+    <>
+      <SiteMeta
+        title={topic.title}
+        canonical={`/forum/topic/${topic.id}`}
+        description={topicDescription}
+      />
     <MainLayout>
       <ForumLayout categories={categories}>
         <div className="space-y-6">
@@ -270,7 +281,7 @@ export default function TopicView({ topic: initialTopic, categories }) {
                 <div className="flex space-x-4 text-sm text-gray-600 dark:text-gray-400">
                   
                   {/* 管理按钮 - 仅对管理员或作者显示 */}
-                  {user && (user.role === 'ADMIN' || user.id === topic.profiles?.id) && (
+                  {user && (userRole === 'ADMIN' || user.id === topic.profiles?.id) && (
                     <div className="flex space-x-2">
                       <Link href={`/forum/edit/${topic.id}`}>
                         <button className="flex items-center space-x-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
@@ -421,6 +432,7 @@ export default function TopicView({ topic: initialTopic, categories }) {
         </div>
       </ForumLayout>
     </MainLayout>
+    </>
   );
 }
 
@@ -436,7 +448,7 @@ export async function getServerSideProps({ params, req, res }) {
       .from('ForumTopic')
       .select(`
         *,
-        profiles:userid (id, email, avatar_url, role, name),
+        profiles:userid (id, email, avatar_url, role, full_name),
         category:categoryId (*)
       `)
       .eq('id', id)

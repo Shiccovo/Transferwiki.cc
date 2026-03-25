@@ -44,7 +44,7 @@ export default function ReplyCard({ reply, onEdit, onDelete, isFirst = false }) 
   }, [user, supabase]);
   
   // 确保我们能正确获取回复用户的名称 - 使用profiles.name
-  const authorName = reply.profiles ? (reply.profiles.name || '未知用户') : '未知用户';
+  const authorName = reply.profiles ? (reply.profiles.full_name || reply.profiles.email?.split('@')[0] || '未知用户') : '未知用户';
   const replyUserColor = stringToColor(authorName);
   
   const handleEdit = () => {
@@ -93,7 +93,7 @@ export default function ReplyCard({ reply, onEdit, onDelete, isFirst = false }) 
         <div className="flex items-start space-x-4">
           <div className="flex-shrink-0">
             <img 
-              src={reply.profiles?.avatar_url || '/default-avatar.png'} 
+              src={reply.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=random`}
               alt={authorName}
               className="h-10 w-10 rounded-full"
             />
